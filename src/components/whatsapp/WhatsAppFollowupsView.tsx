@@ -359,21 +359,29 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                   </div>
 
                   {/* WhatsApp actions directly on mobile card */}
-                  <div className="flex items-center gap-2 pt-2.5 border-t border-slate-100/70">
+                  <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100/70">
                     <button
                       onClick={() => handleMarkDetailsSent(leadId)}
                       disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
-                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                     >
                       Mark Brochure Sent
                     </button>
                     <button
                       onClick={() => handleStartFollowup(leadId)}
                       disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
-                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                     >
                       Start WhatsApp Follow Up
                     </button>
+                    <a
+                      href={getWhatsAppUrl(lead.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-center text-xs py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 hover:text-emerald-900 transition-all font-bold rounded-lg min-w-[120px]"
+                    >
+                      WhatsApp
+                    </a>
                   </div>
                 </div>
               );
