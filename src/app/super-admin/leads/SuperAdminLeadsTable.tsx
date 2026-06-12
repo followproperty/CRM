@@ -339,7 +339,7 @@ export default function SuperAdminLeadsTable({
         {/* Toast Alert Messaging */}
         {message && (
           <div
-            className={`fixed bottom-6 right-6 z-50 flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl border shadow-2xl transition-all duration-300 animate-slide-in min-w-[280px] max-w-md ${
+            className={`fixed bottom-6 right-6 z-[9999] flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl border shadow-2xl transition-all duration-300 animate-slide-in min-w-[280px] max-w-md ${
               message.isError
                 ? "bg-red-550/10 border-red-200 text-red-800"
                 : "bg-emerald-50 border-emerald-200 text-emerald-805"

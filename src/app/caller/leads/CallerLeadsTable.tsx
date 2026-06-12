@@ -154,7 +154,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
       {/* Toast Alert Messaging */}
       {message && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3.5 rounded-xl border shadow-xl transition-all duration-300 animate-slide-in ${
+          className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3.5 rounded-xl border shadow-xl transition-all duration-300 animate-slide-in ${
             message.isError
               ? "bg-white border-red-200 text-red-800"
               : "bg-white border-emerald-200 text-emerald-800"
