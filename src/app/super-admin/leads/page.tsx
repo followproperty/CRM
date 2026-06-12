@@ -12,6 +12,7 @@ interface PageProps {
     search?: string;
     status?: string;
     assignment?: string;
+    page?: string;
   }>;
 }
 
@@ -52,9 +53,14 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
   const search = params.search || "";
   const statusFilter = params.status || "ALL";
   const assignmentFilter = params.assignment || "ALL";
+  const currentPage = Math.max(1, parseInt(params.page || "1") || 1);
+  const LIMIT = 50;
 
   let leads: PopulatedLead[] = [];
   let eligibleUsers: { _id: string; name: string; role: string; activeCount: number }[] = [];
+  let totalCount = 0;
+  let totalUnassignedCount = 0;
+  let oldestUnassignedIds: string[] = [];
   let error: string | null = null;
 
   try {
@@ -80,9 +86,31 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       query.assignedTo = { $ne: null, $exists: true };
     }
 
+    // Count matching documents for pagination
+    totalCount = await Lead.countDocuments(query);
+
+    // Get total unassigned leads (database-wide)
+    totalUnassignedCount = await Lead.countDocuments({
+      $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
+    });
+
+    // Get oldest unassigned lead IDs for Quick Allocation
+    const oldestUnassignedDocs = await Lead.find({
+      $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
+    })
+      .select("_id")
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .lean();
+
+    oldestUnassignedIds = oldestUnassignedDocs.map((doc) => doc._id.toString());
+
+    // Fetch paginated leads
     const leadDocs = await Lead.find(query)
       .populate("assignedTo", "name")
       .sort({ createdAt: -1 })
+      .skip((currentPage - 1) * LIMIT)
+      .limit(LIMIT)
       .lean();
 
     // Serialize database models to plain objects
@@ -149,6 +177,8 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
     error = "Unable to load leads from the database. Please try again later.";
   }
 
+  const totalPages = Math.ceil(totalCount / LIMIT);
+
   return (
     <div className="space-y-6">
       {/* Title Header */}
@@ -171,7 +201,17 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       )}
 
       {/* SuperAdminLeadsTable Client Component wrapper */}
-      {!error && <SuperAdminLeadsTable leads={leads} eligibleUsers={eligibleUsers} />}
+      {!error && (
+        <SuperAdminLeadsTable
+          leads={leads}
+          eligibleUsers={eligibleUsers}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalUnassignedCount={totalUnassignedCount}
+          oldestUnassignedIds={oldestUnassignedIds}
+        />
+      )}
     </div>
   );
 }
