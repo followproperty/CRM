@@ -7,15 +7,22 @@ interface EligibleUser {
   _id: string;
   name: string;
   role: string;
+  activeCount?: number;
 }
 
 interface AssigneeSelectProps {
   leadId: string;
   currentAssigneeId?: string;
   eligibleUsers: EligibleUser[];
+  activeCap?: number;
 }
 
-export default function AssigneeSelect({ leadId, currentAssigneeId = "", eligibleUsers }: AssigneeSelectProps) {
+export default function AssigneeSelect({ 
+  leadId, 
+  currentAssigneeId = "", 
+  eligibleUsers,
+  activeCap = 80
+}: AssigneeSelectProps) {
   const [isPending, startTransition] = useTransition();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -41,11 +48,18 @@ export default function AssigneeSelect({ leadId, currentAssigneeId = "", eligibl
         }`}
       >
         <option value="">Unassigned</option>
-        {eligibleUsers.map((user) => (
-          <option key={user._id} value={user._id}>
-            {user.name} ({user.role === "CALLER" ? "Caller" : "Admin"})
-          </option>
-        ))}
+        {eligibleUsers.map((user) => {
+          const isCaller = user.role === "CALLER";
+          const count = user.activeCount ?? 0;
+          const isFull = isCaller && count >= activeCap;
+          const isDisabled = isFull && user._id !== currentAssigneeId;
+
+          return (
+            <option key={user._id} value={user._id} disabled={isDisabled}>
+              {user.name} ({count}/{isCaller ? activeCap : "∞"}{isFull ? " FULL" : ""})
+            </option>
+          );
+        })}
       </select>
       {isPending && (
         <span className="absolute right-7 top-1/2 -translate-y-1/2 flex h-2 w-2">

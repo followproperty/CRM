@@ -63,6 +63,13 @@ export interface ILead {
   _id?: string | Types.ObjectId;
   name: string;
   phone: string;
+  primaryPhone?: string;
+  secondaryPhone?: string;
+  customerCode?: string;
+  projectName?: string;
+  address?: string;
+  country?: string;
+  sourceDetails?: Record<string, unknown>;
   email?: string;
   source: string;
   sourceType?: string;

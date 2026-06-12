@@ -56,7 +56,8 @@ export default async function SuperAdminUsersPage() {
               <span className="text-xs text-slate-400 font-medium font-mono">Real-time DB query</span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Users Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -115,6 +116,69 @@ export default async function SuperAdminUsersPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Users Card Layout */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {users.map((user) => {
+                const isSelf = user._id?.toString() === session.userId;
+                const roleLabel = user.role.replace("_", " ");
+
+                return (
+                  <div key={user._id?.toString()} className="p-4 space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 text-sm">{user.name}</span>
+                          {isSelf && (
+                            <span className="text-[9px] px-1.5 py-0.2 bg-indigo-50 text-indigo-755 border border-indigo-200 rounded uppercase font-bold">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-[11px] text-slate-450 block mt-0.5 truncate">{user.email}</span>
+                      </div>
+                      
+                      {/* Role Badge */}
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase border shrink-0 ${
+                        user.role === UserRole.SUPER_ADMIN ? "bg-purple-50 text-purple-700 border-purple-200" :
+                        user.role === UserRole.ADMIN ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                        user.role === UserRole.CALLER ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {roleLabel}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs pt-2.5 border-t border-slate-100/70">
+                      {/* Status */}
+                      <span className={`inline-flex items-center gap-1 font-semibold ${
+                        user.isActive ? "text-emerald-705" : "text-red-705"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
+                        {user.isActive ? "Active" : "Inactive"}
+                      </span>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        {/* Edit Button (disabled visual placeholder per guidelines) */}
+                        <button
+                          disabled
+                          className="text-xs font-semibold px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-md cursor-not-allowed"
+                        >
+                          Edit
+                        </button>
+                        {/* Activate/Deactivate */}
+                        <UserStatusButton
+                          userId={user._id?.toString() || ""}
+                          isActive={user.isActive}
+                          disabled={isSelf}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

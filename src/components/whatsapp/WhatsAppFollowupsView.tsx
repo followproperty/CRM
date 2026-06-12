@@ -169,7 +169,8 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
 
       {/* Leads Registry Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider bg-slate-50/70">
@@ -222,7 +223,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                       </td>
                       {/* Caller */}
                       <td className="px-6 py-4 text-slate-700">
-                        {lead.assignedTo?.name || <span className="text-slate-450 italic">Unassigned</span>}
+                        {lead.assignedTo?.name || <span className="text-slate-455 italic">Unassigned</span>}
                       </td>
                       {/* Handoff Date */}
                       <td className="px-6 py-4 font-mono text-slate-500">
@@ -259,6 +260,98 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredLeads.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-400 italic text-sm">
+              No WhatsApp follow-up handoffs found.
+            </div>
+          ) : (
+            filteredLeads.map((lead) => {
+              const leadId = lead._id;
+              const handoffDateStr = lead.handedOffAt
+                ? new Date(lead.handedOffAt).toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "Unknown Date";
+
+              return (
+                <div key={leadId} className="p-4 space-y-3.5">
+                  <div className="flex justify-between items-start gap-2">
+                    {/* Lead Name (clickable modal trigger) */}
+                    <button
+                      onClick={() => {
+                        setSelectedLeadId(leadId);
+                        setSelectedLead(lead as unknown as ILead);
+                      }}
+                      className="font-bold text-slate-900 hover:text-cyan-650 hover:underline text-left text-sm transition-colors cursor-pointer"
+                    >
+                      {lead.name}
+                    </button>
+                    {/* Status Badge */}
+                    <span className={`px-2 py-0.5 rounded border text-[10px] font-bold tracking-wide shrink-0 ${getStatusStyles(lead.status)}`}>
+                      {lead.status.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Phone</span>
+                      <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-cyan-655 font-semibold flex items-center gap-1">
+                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {lead.phone}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Project Context</span>
+                      <span className="font-semibold text-slate-850 truncate block">
+                        {lead.projectId?.name || <span className="text-slate-400 italic">No project</span>}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Handoff By</span>
+                      <span className="font-semibold text-slate-750">
+                        {lead.assignedTo?.name || "Unassigned"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Handoff Time</span>
+                      <span className="font-mono text-slate-755">{handoffDateStr}</span>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp actions directly on mobile card */}
+                  <div className="flex items-center gap-2 pt-2.5 border-t border-slate-100/70">
+                    <button
+                      onClick={() => handleMarkDetailsSent(leadId)}
+                      disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
+                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Details Sent
+                    </button>
+                    <button
+                      onClick={() => handleStartFollowup(leadId)}
+                      disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
+                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Follow-up
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

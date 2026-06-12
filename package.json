@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:leads": "npx tsx src/scripts/seed_leads.ts"
+    "seed:leads": "npx tsx src/scripts/seed_leads.ts",
+    "migrate:leads": "npx tsx src/scripts/migrate_phone_fields.ts",
+    "import:test-leads": "npx tsx src/scripts/import_test_leads.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -15,7 +17,8 @@
     "mongoose": "^9.7.0",
     "next": "^15.5.19",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

@@ -72,6 +72,40 @@ const LeadSchema = new Schema<ILeadDocument>(
       required: [true, "Phone number is required"],
       trim: true,
     },
+    primaryPhone: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    secondaryPhone: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    customerCode: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    projectName: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    address: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    country: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    sourceDetails: {
+      type: Schema.Types.Mixed,
+      required: false,
+    },
     email: {
       type: String,
       trim: true,
@@ -196,15 +230,29 @@ const LeadSchema = new Schema<ILeadDocument>(
   }
 );
 
+// Backward compatibility hook: sync phone and primaryPhone bidirectionally
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+LeadSchema.pre("validate", function (this: any) {
+  if (this.phone && !this.primaryPhone) {
+    this.primaryPhone = this.phone;
+  } else if (this.primaryPhone && !this.phone) {
+    this.phone = this.primaryPhone;
+  }
+});
+
 // Indexes for common queries:
 // 1. Quick lookups/duplicate checking by phone
 LeadSchema.index({ phone: 1 });
+LeadSchema.index({ primaryPhone: 1 }, { sparse: true });
 
 // 2. Fetching list of leads assigned to a caller by status
 LeadSchema.index({ assignedTo: 1, status: 1 });
 
 // 3. Finding upcoming follow-ups
 LeadSchema.index({ "followUp.date": 1 });
+
+// 4. Source-based tracking
+LeadSchema.index({ source: 1 });
 
 /**
  * Lead Model

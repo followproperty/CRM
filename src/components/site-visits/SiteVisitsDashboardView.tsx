@@ -277,7 +277,8 @@ export default function SiteVisitsDashboardView({
 
       {/* Leads Registry Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Site Visits Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider bg-slate-50/70">
@@ -376,7 +377,7 @@ export default function SiteVisitsDashboardView({
                                 id={`lost-select-${leadId}`}
                                 value={selectedReason}
                                 onChange={(e) => setSelectedReason(e.target.value)}
-                                className="bg-white border border-slate-200 focus:border-rose-500/50 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none cursor-pointer"
+                                className="bg-white border border-slate-200 focus:border-rose-500/50 rounded px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none cursor-pointer"
                               >
                                 <option value="Price Issue">Price Issue</option>
                                 <option value="Competitor">Competitor</option>
@@ -388,7 +389,7 @@ export default function SiteVisitsDashboardView({
                                 <button
                                   type="button"
                                   onClick={() => setLostReasonLeadId(null)}
-                                  className="px-2 py-0.5 text-slate-650 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-semibold cursor-pointer"
+                                  className="px-2.5 py-0.5 text-slate-650 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-semibold cursor-pointer"
                                 >
                                   Cancel
                                 </button>
@@ -469,6 +470,179 @@ export default function SiteVisitsDashboardView({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Site Visits Card Layout */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {activeVisits.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-400 italic text-sm">
+              No site visits found matching current criteria.
+            </div>
+          ) : (
+            activeVisits.map((lead) => {
+              const leadId = lead._id;
+              const isEligibleForConversion = 
+                lead.status === LeadStatus.SITE_VISIT || 
+                lead.status === LeadStatus.NEGOTIATION;
+
+              const wonDateStr = lead.wonAt ? new Date(lead.wonAt).toLocaleDateString() : "";
+              const lostDateStr = lead.lostAt ? new Date(lead.lostAt).toLocaleDateString() : "";
+              const visitDateStr = lead.siteVisitDate ? (
+                new Date(lead.siteVisitDate).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              ) : (
+                "Not Scheduled"
+              );
+
+              return (
+                <div key={leadId} className="p-4 space-y-3.5">
+                  <div className="flex justify-between items-start gap-2">
+                    {/* Lead Name (clickable modal trigger) */}
+                    <button
+                      onClick={() => {
+                        setSelectedLeadId(leadId);
+                        setSelectedLead(lead as unknown as ILead);
+                      }}
+                      className="font-bold text-slate-900 hover:text-purple-655 hover:underline text-left text-sm transition-colors cursor-pointer"
+                    >
+                      {lead.name}
+                    </button>
+                    
+                    {/* Statuses (Double badge display) */}
+                    <div className="flex flex-col gap-1 items-end shrink-0">
+                      <span className={`px-2 py-0.5 rounded-full border text-[9.5px] font-semibold tracking-wide ${getSiteVisitStatusStyles(lead.siteVisitStatus)}`}>
+                        Visit: {lead.siteVisitStatus ? lead.siteVisitStatus.replace("_", " ") : "UNKNOWN"}
+                      </span>
+                      <span className={`px-2 py-0.2 rounded border text-[8.5px] font-extrabold uppercase ${getLeadStatusStyles(lead.status)}`}>
+                        Lead: {lead.status.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Caller</span>
+                      <span className="font-semibold text-slate-850 truncate block">
+                        {lead.assignedTo ? lead.assignedTo.name : <span className="text-slate-400 italic">Unassigned</span>}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Visit Date</span>
+                      <span className="font-mono text-slate-800 font-semibold block">
+                        {visitDateStr}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Workflow conversion actions on mobile card */}
+                  <div className="pt-3 border-t border-slate-100/70">
+                    {isEligibleForConversion ? (
+                      lostReasonLeadId === leadId ? (
+                        /* Inline Lost Reason Confirmation Form */
+                        <div className="flex flex-col gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 w-full animate-fade-in">
+                          <label htmlFor={`lost-select-mobile-${leadId}`} className="text-[9.5px] font-extrabold text-rose-600 uppercase tracking-widest">
+                            Lost Reason
+                          </label>
+                          <select
+                            id={`lost-select-mobile-${leadId}`}
+                            value={selectedReason}
+                            onChange={(e) => setSelectedReason(e.target.value)}
+                            className="bg-white border border-slate-200 focus:border-rose-500/50 rounded px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none cursor-pointer"
+                          >
+                            <option value="Price Issue">Price Issue</option>
+                            <option value="Competitor">Competitor</option>
+                            <option value="No Response">No Response</option>
+                            <option value="Budget Issue">Budget Issue</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          <div className="flex gap-2 justify-end mt-1">
+                            <button
+                              type="button"
+                              onClick={() => setLostReasonLeadId(null)}
+                              className="px-3 py-1 text-slate-650 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-100 rounded text-xs font-semibold cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isPending}
+                              onClick={() => handleConfirmLost(leadId)}
+                              className="px-3.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Standard conversion status buttons on mobile */
+                        <div className="flex items-center gap-2">
+                          {/* 1. Negotiation button */}
+                          {lead.status === LeadStatus.SITE_VISIT && (
+                            <button
+                              onClick={() => handleStartNegotiation(leadId)}
+                              disabled={isPending}
+                              className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
+                            >
+                              Negotiate
+                            </button>
+                          )}
+
+                          {/* 2. Customer Won button */}
+                          <button
+                            onClick={() => handleMarkWon(leadId)}
+                            disabled={isPending}
+                            className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
+                          >
+                            Won
+                          </button>
+
+                          {/* 3. Customer Lost button */}
+                          <button
+                            onClick={() => {
+                              setLostReasonLeadId(leadId);
+                              setSelectedReason("Price Issue");
+                            }}
+                            disabled={isPending}
+                            className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
+                          >
+                            Lost
+                          </button>
+                        </div>
+                      )
+                    ) : lead.status === LeadStatus.CUSTOMER ? (
+                      <div className="flex flex-col items-start text-emerald-650">
+                        <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1">
+                          ✔ Customer Won
+                        </span>
+                        {wonDateStr && (
+                          <span className="text-[10px] text-slate-450 font-mono mt-0.5">Won at: {wonDateStr}</span>
+                        )}
+                      </div>
+                    ) : lead.status === LeadStatus.LOST ? (
+                      <div className="flex flex-col items-start text-rose-650">
+                        <span className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
+                          ✘ Lost Account
+                        </span>
+                        <span className="text-[11px] text-slate-500 italic mt-0.5">
+                          Reason: {lead.lostReason || "Other"}
+                        </span>
+                        {lostDateStr && (
+                          <span className="text-[10px] text-slate-450 font-mono mt-0.5">Lost at: {lostDateStr}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Actions Unavailable</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

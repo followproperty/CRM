@@ -12,6 +12,7 @@ export default function LeadsFilters() {
 
   const currentSearch = searchParams.get("search") || "";
   const currentStatus = searchParams.get("status") || "ALL";
+  const currentAssignment = searchParams.get("assignment") || "ALL";
 
   function handleFilterChange(name: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -27,7 +28,7 @@ export default function LeadsFilters() {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm w-full">
       {/* Search Input */}
       <div className="w-full sm:max-w-xs relative">
         <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
@@ -48,24 +49,44 @@ export default function LeadsFilters() {
         />
       </div>
 
-      {/* Status Filter */}
-      <div className="w-full sm:w-auto flex items-center gap-2">
-        <label htmlFor="status-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
-          Status:
-        </label>
-        <select
-          id="status-select"
-          value={currentStatus}
-          onChange={(e) => handleFilterChange("status", e.target.value)}
-          className="bg-slate-50 border border-slate-200 focus:border-indigo-550/50 focus:bg-white rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none transition-all cursor-pointer min-w-[150px]"
-        >
-          <option value="ALL">All Leads</option>
-          {Object.values(LeadStatus).map((status) => (
-            <option key={status} value={status}>
-              {status.replace("_", " ")}
-            </option>
-          ))}
-        </select>
+      {/* Filters group */}
+      <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-4 justify-end">
+        {/* Status Filter */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label htmlFor="status-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
+            Status:
+          </label>
+          <select
+            id="status-select"
+            value={currentStatus}
+            onChange={(e) => handleFilterChange("status", e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-550/50 focus:bg-white rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none transition-all cursor-pointer min-w-[140px]"
+          >
+            <option value="ALL">All Statuses</option>
+            {Object.values(LeadStatus).map((status) => (
+              <option key={status} value={status}>
+                {status.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Assignment Filter */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label htmlFor="assignment-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
+            Assignment:
+          </label>
+          <select
+            id="assignment-select"
+            value={currentAssignment}
+            onChange={(e) => handleFilterChange("assignment", e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-550/50 focus:bg-white rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none transition-all cursor-pointer min-w-[140px]"
+          >
+            <option value="ALL">All Allocation States</option>
+            <option value="ASSIGNED">Assigned Only</option>
+            <option value="UNASSIGNED">Unassigned Only</option>
+          </select>
+        </div>
       </div>
     </div>
   );

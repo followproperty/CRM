@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { getLeadNotesAction, addLeadNoteAction, PopulatedNote } from "@/app/actions/notes";
 import { ILead, LeadStatus } from "@/types/lead";
+import { UserRole } from "@/types/user";
 
 interface LeadDetailsModalProps {
   leadId: string;
   lead: ILead;
   isOpen: boolean;
   onClose: () => void;
+  role?: UserRole;
 }
 
 function getStatusStyles(status: LeadStatus) {
@@ -44,7 +46,7 @@ function getStatusStyles(status: LeadStatus) {
   }
 }
 
-export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: LeadDetailsModalProps) {
+export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }: LeadDetailsModalProps) {
   const [notes, setNotes] = useState<PopulatedNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -90,6 +92,8 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
     });
   };
 
+  const isCaller = role === UserRole.CALLER;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-600/50 backdrop-blur-sm animate-fade-in">
       <div 
@@ -100,7 +104,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div>
             <h2 className="text-lg font-bold text-slate-855">Lead Details</h2>
-            <p className="text-xs text-slate-450 font-mono">ID: {leadId}</p>
+            {!isCaller && <p className="text-xs text-slate-450 font-mono">ID: {leadId}</p>}
           </div>
           <button
             onClick={onClose}
@@ -116,54 +120,100 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
           {/* Section 1: Lead Profile */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
-            <h3 className="text-xs font-bold text-purple-700 uppercase tracking-wider">Profile Information</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Full Name</label>
-                <p className="text-slate-900 font-medium">{lead.name}</p>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Phone</label>
-                <p className="font-mono text-slate-700">
-                  <a href={`tel:${lead.phone}`} className="hover:text-purple-650 hover:underline transition-all">{lead.phone}</a>
-                </p>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Email</label>
-                <p className="text-slate-700 truncate">{lead.email || <span className="text-slate-400 italic">Not provided</span>}</p>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Source</label>
-                <p className="text-slate-700">{lead.sourceType || "DIRECT"} ({lead.source})</p>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</label>
-                <div className="mt-0.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusStyles(lead.status)}`}>
-                    {lead.status.replace("_", " ")}
-                  </span>
+          {isCaller ? (
+            <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-4 space-y-4">
+              <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Profile Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Full Name</label>
+                  <p className="text-slate-900 font-bold text-base mt-0.5">{lead.name}</p>
                 </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Location</label>
-                <p className="text-slate-700">
-                  {lead.city || lead.state 
-                    ? [lead.city, lead.state].filter(Boolean).join(", ") 
-                    : <span className="text-slate-400 italic">Not set</span>
-                  }
-                </p>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Primary Phone</label>
+                  <p className="font-mono text-slate-905 font-bold text-base mt-0.5">
+                    <a href={`tel:${lead.primaryPhone || lead.phone}`} className="text-emerald-700 hover:underline transition-all flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      {lead.primaryPhone || lead.phone}
+                    </a>
+                  </p>
+                </div>
+                {lead.secondaryPhone && (
+                  <div>
+                    <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Secondary Phone</label>
+                    <p className="font-mono text-slate-705 font-medium mt-0.5">
+                      <a href={`tel:${lead.secondaryPhone}`} className="text-slate-700 hover:underline transition-all flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {lead.secondaryPhone}
+                      </a>
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Project Name</label>
+                  <p className="text-slate-800 font-semibold mt-0.5">{lead.projectName || <span className="text-slate-400 italic">Not set</span>}</p>
+                </div>
+                {lead.address && (
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Address</label>
+                    <p className="text-slate-800 mt-0.5 leading-relaxed">{lead.address}</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+              <h3 className="text-xs font-bold text-purple-700 uppercase tracking-wider">Profile Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Full Name</label>
+                  <p className="text-slate-900 font-medium">{lead.name}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Phone</label>
+                  <p className="font-mono text-slate-700">
+                    <a href={`tel:${lead.phone}`} className="hover:text-purple-650 hover:underline transition-all">{lead.phone}</a>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Email</label>
+                  <p className="text-slate-700 truncate">{lead.email || <span className="text-slate-400 italic">Not provided</span>}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Source</label>
+                  <p className="text-slate-700">{lead.sourceType || "DIRECT"} ({lead.source})</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</label>
+                  <div className="mt-0.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusStyles(lead.status)}`}>
+                      {lead.status.replace("_", " ")}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Location</label>
+                  <p className="text-slate-700">
+                    {lead.city || lead.state 
+                      ? [lead.city, lead.state].filter(Boolean).join(", ") 
+                      : <span className="text-slate-400 italic">Not set</span>
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Section 2: Remarks Timeline & Addition */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-purple-700 uppercase tracking-wider">Historical Remarks Timeline</h3>
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${isCaller ? "text-emerald-800" : "text-purple-700"}`}>Historical Remarks Timeline</h3>
 
             {/* Error Message */}
             {errorMessage && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-lg flex items-center gap-2">
+              <div className="bg-red-55 border border-red-200 text-red-700 text-xs p-3 rounded-lg flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -179,14 +229,18 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Record conversation outcome, requirements, or callback detail..."
-                  className="w-full bg-slate-555 border border-slate-200 focus:border-purple-500 focus:bg-white rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all resize-none"
+                  className={`w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all resize-none ${isCaller ? "focus:border-emerald-500" : "focus:border-purple-500"}`}
                 />
               </div>
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={isPending || !newNote.trim()}
-                  className="px-4 py-1.5 bg-purple-650 hover:bg-purple-700 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-lg text-xs font-bold shadow-md shadow-purple-200 cursor-pointer transition-colors"
+                  className={`px-4 py-1.5 text-white rounded-lg text-xs font-bold shadow-md cursor-pointer transition-colors ${
+                    isCaller 
+                      ? "bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 shadow-emerald-100" 
+                      : "bg-purple-600 hover:bg-purple-700 disabled:bg-slate-100 disabled:text-slate-400 shadow-purple-200"
+                  }`}
                 >
                   {isPending ? "Adding remark..." : "Save Remark"}
                 </button>
@@ -197,9 +251,9 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
             <div className="border-t border-slate-200 pt-4">
               {isLoadingNotes ? (
                 <div className="flex justify-center items-center py-10 space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" />
+                  <span className={`w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s] ${isCaller ? "bg-emerald-500" : "bg-purple-500"}`} />
+                  <span className={`w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s] ${isCaller ? "bg-emerald-500" : "bg-purple-500"}`} />
+                  <span className={`w-2 h-2 rounded-full animate-bounce ${isCaller ? "bg-emerald-500" : "bg-purple-500"}`} />
                 </div>
               ) : notes.length === 0 ? (
                 <div className="p-8 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center italic text-slate-400 text-xs">
@@ -223,8 +277,8 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
                     return (
                       <div key={note._id} className="relative group">
                         {/* Timeline Node Icon/Dot */}
-                        <span className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border border-purple-500 bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                        <span className={`absolute -left-[31px] top-1.5 w-3 h-3 rounded-full border bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCaller ? "border-emerald-500" : "border-purple-500"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCaller ? "bg-emerald-500" : "bg-purple-500"}`} />
                         </span>
                         
                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-2 hover:border-slate-300 transition-all">
@@ -243,7 +297,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose }: Lead
                               {formattedTime}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{note.note}</p>
+                          <p className="text-xs text-slate-707 leading-relaxed whitespace-pre-wrap">{note.note}</p>
                         </div>
                       </div>
                     );

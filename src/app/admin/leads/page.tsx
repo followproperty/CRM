@@ -1,11 +1,17 @@
 import React from "react";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
 import Lead from "@/models/lead.model";
 import User from "@/models/user.model";
 import { ILead, LeadStatus } from "@/types/lead";
 import { UserRole } from "@/types/user";
-import LeadsFilters from "./LeadsFilters";
-import SuperAdminLeadsTable from "./SuperAdminLeadsTable";
+import LeadsFilters from "../../super-admin/leads/LeadsFilters";
+import SuperAdminLeadsTable from "../../super-admin/leads/SuperAdminLeadsTable";
+
+// Force models registration
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _models = { User, Lead };
 
 interface PageProps {
   searchParams: Promise<{
@@ -47,7 +53,12 @@ interface DBPopulatedLead {
 
 export const revalidate = 0;
 
-export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
+export default async function AdminLeadsPage({ searchParams }: PageProps) {
+  const session = await getSession();
+  if (!session || (session.role !== UserRole.ADMIN && session.role !== UserRole.SUPER_ADMIN)) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const search = params.search || "";
   const statusFilter = params.status || "ALL";
@@ -145,7 +156,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       })
     );
   } catch (err) {
-    console.error("Failed to fetch leads for super admin:", err);
+    console.error("Failed to fetch leads for admin:", err);
     error = "Unable to load leads from the database. Please try again later.";
   }
 
@@ -154,7 +165,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       {/* Title Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Leads Registry</h1>
-        <p className="text-sm text-slate-500 mt-1">Global leads allocation console and caller team load monitoring.</p>
+        <p className="text-sm text-slate-500 mt-1">Leads allocation console and caller team load monitoring.</p>
       </div>
 
       {/* Filter Component */}
@@ -170,7 +181,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      {/* SuperAdminLeadsTable Client Component wrapper */}
+      {/* Leads Table Client Component wrapper */}
       {!error && <SuperAdminLeadsTable leads={leads} eligibleUsers={eligibleUsers} />}
     </div>
   );

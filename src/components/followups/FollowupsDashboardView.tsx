@@ -221,8 +221,10 @@ export default function FollowupsDashboardView({
       </div>
 
       {/* Leads Registry Table */}
+      {/* Leads Registry Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Followups Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider bg-slate-50/70">
@@ -291,6 +293,73 @@ export default function FollowupsDashboardView({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Followups Card Layout */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {activeLeads.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-400 italic text-sm">
+              No leads found matching current criteria.
+            </div>
+          ) : (
+            activeLeads.map((lead) => {
+              const followUpDateStr = lead.nextFollowUp ? (
+                new Date(lead.nextFollowUp).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              ) : (
+                "None Scheduled"
+              );
+
+              return (
+                <div key={lead._id} className="p-4 space-y-3">
+                  <div className="flex justify-between items-start gap-2">
+                    {/* Lead Name (clickable modal trigger) */}
+                    <button
+                      onClick={() => {
+                        setSelectedLeadId(lead._id);
+                        setSelectedLead(lead as unknown as ILead);
+                      }}
+                      className="font-bold text-slate-900 hover:text-indigo-650 hover:underline text-left text-sm transition-colors cursor-pointer"
+                    >
+                      {lead.name}
+                    </button>
+                    {/* Status */}
+                    <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${getStatusStyles(lead.status)}`}>
+                      {lead.status.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Phone</span>
+                      <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-indigo-650 font-semibold flex items-center gap-1">
+                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {lead.phone}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Caller</span>
+                      <span className="font-semibold text-slate-850 truncate block">
+                        {lead.assignedTo ? lead.assignedTo.name : <span className="text-slate-400 italic">Unassigned</span>}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-slate-450 font-mono flex justify-between items-center pt-2.5 border-t border-slate-100/70">
+                    <span>Follow-up Date</span>
+                    <span className="font-semibold text-slate-700">{followUpDateStr}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

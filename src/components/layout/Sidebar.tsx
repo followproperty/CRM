@@ -97,6 +97,7 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
     ],
     [UserRole.ADMIN]: [
       { title: "Overview", href: "/admin", icon: <Icons.Dashboard /> },
+      { title: "Leads Registry", href: "/admin/leads", icon: <Icons.Leads /> },
       { title: "Follow-ups", href: "/admin/followups", icon: <Icons.Phone /> },
       { title: "Site Visits", href: "/admin/site-visits", icon: <Icons.Verify /> },
       { title: "WhatsApp Follow-ups", href: "/admin/whatsapp", icon: <Icons.Chat /> },
@@ -190,15 +191,21 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
 
       {/* Sidebar Footer / Quick Info */}
       <div className="p-4 border-t border-slate-200 space-y-3">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-700 border border-slate-350 shrink-0">
-            {(userName || "User").substring(0, 2).toUpperCase()}
+        {role === UserRole.CALLER ? (
+          <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+            <p className="text-xs font-bold text-slate-700">Caller: {userName || "Agent"}</p>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-700 truncate">{userName || "User"}</p>
-            <p className="text-[10px] text-slate-400 truncate">{userEmail || "user@system.local"}</p>
+        ) : (
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-700 border border-slate-350 shrink-0">
+              {(userName || "User").substring(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-700 truncate">{userName || "User"}</p>
+              <p className="text-[10px] text-slate-400 truncate">{userEmail || "user@system.local"}</p>
+            </div>
           </div>
-        </div>
+        )}
         <button
           onClick={async () => {
             const { logout } = await import("@/app/actions/auth");

@@ -25,8 +25,8 @@ export interface AssignLeadResult {
 
 export async function assignLeadAction(leadId: string, assigneeId: string | null): Promise<AssignLeadResult> {
   const session = await getSession();
-  if (!session || session.role !== UserRole.SUPER_ADMIN) {
-    return { success: false, error: "Unauthorized. Super Admin access required." };
+  if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
+    return { success: false, error: "Unauthorized. Admin or Super Admin access required." };
   }
 
   try {
@@ -580,6 +580,217 @@ export async function getLeadByIdAction(leadId: string): Promise<{ success: bool
   } catch (err) {
     console.error("Get lead by ID error:", err);
     return { success: false, error: "Failed to load lead details" };
+  }
+}
+
+export interface BulkAssignResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: string | null): Promise<BulkAssignResult> {
+  const session = await getSession();
+  if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
+    return { success: false, error: "Unauthorized. Admin or Super Admin access required." };
+  }
+
+  if (!leadIds || leadIds.length === 0) {
+    return { success: false, error: "No leads selected." };
+  }
+
+  try {
+    await dbConnect();
+
+    let assigneeName = "Unassigned";
+    if (assigneeId) {
+      const assignee = await User.findById(assigneeId);
+      if (!assignee) {
+        return { success: false, error: "Assignee not found." };
+      }
+      assigneeName = assignee.name;
+    }
+
+    // Perform updates in bulk
+    if (assigneeId) {
+      await Lead.updateMany(
+        { _id: { $in: leadIds } },
+        {
+          assignedTo: assigneeId,
+          assignedAt: new Date(),
+          assignedBy: session.userId,
+        }
+      );
+    } else {
+      await Lead.updateMany(
+        { _id: { $in: leadIds } },
+        {
+          $unset: { assignedTo: 1, assignedAt: 1, assignedBy: 1 }
+        }
+      );
+    }
+
+    // Log individual lead activity entries for audit trail
+    const activityPromises = leadIds.map(leadId => 
+      Activity.create({
+        leadId,
+        userId: session.userId,
+        action: ActivityAction.LEAD_ASSIGNED,
+        note: assigneeId ? `Bulk assigned to: ${assigneeName}` : "Bulk unassigned",
+        metadata: {
+          source: "BULK_ASSIGNMENT",
+          assignedTo: assigneeId ? assigneeId.toString() : null,
+          assignedBy: session.userId,
+          assigneeName,
+        }
+      })
+    );
+    await Promise.all(activityPromises);
+
+    revalidatePath("/super-admin/leads");
+    revalidatePath("/admin/leads");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Bulk assign leads error:", error);
+    return { success: false, error: "An unexpected error occurred." };
+  }
+}
+
+export interface AutoDistributeResult {
+  success: boolean;
+  assignedCount: number;
+  unassignedCount: number;
+  reason?: string;
+  error?: string;
+}
+
+export async function autoDistributeLeadsAction(leadIds: string[], activeCap: number): Promise<AutoDistributeResult> {
+  const session = await getSession();
+  if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
+    return { success: false, assignedCount: 0, unassignedCount: leadIds.length, error: "Unauthorized." };
+  }
+
+  if (!leadIds || leadIds.length === 0) {
+    return { success: false, assignedCount: 0, unassignedCount: 0, error: "No leads selected." };
+  }
+
+  try {
+    await dbConnect();
+
+    // 1. Fetch unassigned leads in this batch
+    const unassignedLeads = await Lead.find({
+      _id: { $in: leadIds },
+      $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
+    });
+
+    if (unassignedLeads.length === 0) {
+      return { success: true, assignedCount: 0, unassignedCount: 0 };
+    }
+
+    // 2. Fetch all active callers
+    const callersRaw = await User.find({ role: UserRole.CALLER, isActive: true }).lean();
+    
+    const terminalStatuses = [
+      LeadStatus.CUSTOMER,
+      LeadStatus.LOST,
+      LeadStatus.NOT_INTERESTED,
+      LeadStatus.DND,
+      LeadStatus.WRONG_NUMBER
+    ];
+    const activeStatuses = Object.values(LeadStatus).filter(
+      (status) => !terminalStatuses.includes(status)
+    );
+
+    // 3. Compute current active lead counts for each caller
+    const callers = await Promise.all(
+      callersRaw.map(async (caller) => {
+        const activeCount = await Lead.countDocuments({
+          assignedTo: caller._id,
+          status: { $in: activeStatuses }
+        });
+        return {
+          id: caller._id.toString(),
+          name: caller.name,
+          activeCount,
+        };
+      })
+    );
+
+    let assignedCount = 0;
+    let unassignedCount = 0;
+    let capacityReached = false;
+
+    // 4. Distribute leads
+    for (const lead of unassignedLeads) {
+      // Filter callers who are below the active lead cap
+      const eligibleCallers = callers.filter(c => c.activeCount < activeCap);
+
+      if (eligibleCallers.length === 0) {
+        capacityReached = true;
+        unassignedCount = unassignedLeads.length - assignedCount;
+        break;
+      }
+
+      // Sort callers by activeCount ascending, secondary sort by ID string comparison for balanced round-robin allocation
+      eligibleCallers.sort((a, b) => {
+        if (a.activeCount !== b.activeCount) {
+          return a.activeCount - b.activeCount;
+        }
+        return a.id.localeCompare(b.id);
+      });
+
+      const chosenCaller = eligibleCallers[0];
+
+      // Perform assignment on database
+      lead.assignedTo = chosenCaller.id as any;
+      lead.assignedAt = new Date();
+      lead.assignedBy = session.userId as any;
+      await lead.save();
+
+      // Increment local activeCount tracking
+      const callerObj = callers.find(c => c.id === chosenCaller.id);
+      if (callerObj) {
+        callerObj.activeCount++;
+      }
+
+      // Log individual activity entry for audit trail
+      await Activity.create({
+        leadId: lead._id,
+        userId: session.userId,
+        action: ActivityAction.LEAD_ASSIGNED,
+        note: `Auto-distributed to: ${chosenCaller.name}`,
+        metadata: {
+          source: "AUTO_DISTRIBUTION",
+          assignedTo: chosenCaller.id,
+          assignedBy: session.userId,
+          assigneeName: chosenCaller.name,
+          activeLeadCap: activeCap,
+        }
+      });
+
+      assignedCount++;
+    }
+
+    revalidatePath("/super-admin/leads");
+    revalidatePath("/admin/leads");
+
+    if (capacityReached) {
+      return {
+        success: true,
+        assignedCount,
+        unassignedCount,
+        reason: "All callers reached maximum capacity."
+      };
+    }
+
+    return {
+      success: true,
+      assignedCount,
+      unassignedCount: 0
+    };
+  } catch (error) {
+    console.error("Auto distribute leads error:", error);
+    return { success: false, assignedCount: 0, unassignedCount: leadIds.length, error: "An unexpected error occurred." };
   }
 }
 
