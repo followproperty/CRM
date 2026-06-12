@@ -1,5 +1,6 @@
 "use server";
 
+import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import Lead from "@/models/lead.model";
 import Activity from "@/models/activity.model";
@@ -742,9 +743,9 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
       const chosenCaller = eligibleCallers[0];
 
       // Perform assignment on database
-      lead.assignedTo = chosenCaller.id as any;
+      lead.assignedTo = chosenCaller.id as unknown as Types.ObjectId;
       lead.assignedAt = new Date();
-      lead.assignedBy = session.userId as any;
+      lead.assignedBy = session.userId as unknown as Types.ObjectId;
       await lead.save();
 
       // Increment local activeCount tracking

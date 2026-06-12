@@ -23,7 +23,7 @@ if (fs.existsSync(envPath)) {
 }
 
 // Utility to normalize phone values
-function normalizePhone(val: any): string {
+function normalizePhone(val: unknown): string {
   if (val === undefined || val === null) return "";
   let str = String(val).trim();
   str = str.replace(/[\s\-\(\)]/g, "");
@@ -83,7 +83,7 @@ async function main() {
   const workbook = XLSX.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
-  const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const rawRows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   console.log(`Loaded sheet. Total raw rows: ${rawRows.length}`);
 
   let rowsImported = 0;
@@ -158,8 +158,8 @@ async function main() {
     try {
       await Lead.create(leadPayload);
       rowsImported++;
-    } catch (err: any) {
-      console.error(`Failed to create lead at row index ${idx}:`, err.message);
+    } catch (err) {
+      console.error(`Failed to create lead at row index ${idx}:`, err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -267,8 +267,8 @@ async function main() {
     try {
       await Lead.create(leadPayload);
       reImportedCount++;
-    } catch (err: any) {
-      console.error(`Failed to re-import lead at row index ${idx}:`, err.message);
+    } catch (err) {
+      console.error(`Failed to re-import lead at row index ${idx}:`, err instanceof Error ? err.message : String(err));
     }
   }
 

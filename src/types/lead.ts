@@ -123,7 +123,7 @@ export function getWhatsAppUrl(phone: string, country?: string): string {
   if (!phone) return "";
   
   // Trim and check
-  let trimmed = phone.trim();
+  const trimmed = phone.trim();
   if (!trimmed) return "";
 
   // If it starts with +, remove + and use the rest as digits.
