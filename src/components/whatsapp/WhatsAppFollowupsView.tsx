@@ -247,13 +247,26 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col sm:flex-row items-center gap-2">
-                          <button
-                            onClick={() => handleMarkDetailsSent(leadId)}
-                            disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
-                            className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                          >
-                            Mark Brochure Sent
-                          </button>
+                          <div className="flex items-center gap-1 w-full sm:w-auto">
+                            <button
+                              onClick={() => handleMarkDetailsSent(leadId)}
+                              disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
+                              className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
+                            >
+                              Mark Brochure Sent
+                            </button>
+                            <a
+                              href={getWhatsAppUrl(lead.phone)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Send Brochure via WhatsApp"
+                              className="inline-flex items-center justify-center p-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-lg transition-all active:scale-[0.95] shrink-0"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.457 3.477 1.328 4.989L2 22l5.182-1.36c1.464.797 3.11 1.218 4.82 1.218 5.508 0 9.99-4.482 9.99-9.988C22 6.482 17.518 2 12.012 2zm0 17.47c-1.536 0-3.04-.413-4.354-1.196l-.312-.185-3.238.85.865-3.155-.203-.324a8.172 8.172 0 01-1.258-4.477c0-4.526 3.682-8.207 8.213-8.207 2.19 0 4.25.854 5.798 2.404a8.144 8.144 0 012.41 5.803c0 4.527-3.683 8.209-8.21 8.209z" />
+                              </svg>
+                            </a>
+                          </div>
                           <button
                             onClick={() => handleStartFollowup(leadId)}
                             disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
@@ -261,14 +274,6 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                           >
                             Start WhatsApp Follow Up
                           </button>
-                          <a
-                            href={getWhatsAppUrl(lead.phone)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-center text-xs px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 hover:text-emerald-900 transition-all font-medium rounded-lg w-full sm:w-auto"
-                          >
-                            WhatsApp
-                          </a>
                         </div>
                       </td>
                     </tr>
@@ -360,13 +365,26 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
 
                   {/* WhatsApp actions directly on mobile card */}
                   <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100/70">
-                    <button
-                      onClick={() => handleMarkDetailsSent(leadId)}
-                      disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
-                      className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
-                    >
-                      Mark Brochure Sent
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                      <button
+                        onClick={() => handleMarkDetailsSent(leadId)}
+                        disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
+                        className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Mark Brochure Sent
+                      </button>
+                      <a
+                        href={getWhatsAppUrl(lead.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Send Brochure via WhatsApp"
+                        className="inline-flex items-center justify-center p-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-lg transition-all active:scale-[0.95] shrink-0 h-[34px] w-[34px]"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.457 3.477 1.328 4.989L2 22l5.182-1.36c1.464.797 3.11 1.218 4.82 1.218 5.508 0 9.99-4.482 9.99-9.988C22 6.482 17.518 2 12.012 2zm0 17.47c-1.536 0-3.04-.413-4.354-1.196l-.312-.185-3.238.85.865-3.155-.203-.324a8.172 8.172 0 01-1.258-4.477c0-4.526 3.682-8.207 8.213-8.207 2.19 0 4.25.854 5.798 2.404a8.144 8.144 0 012.41 5.803c0 4.527-3.683 8.209-8.21 8.209z" />
+                        </svg>
+                      </a>
+                    </div>
                     <button
                       onClick={() => handleStartFollowup(leadId)}
                       disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
@@ -374,14 +392,6 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                     >
                       Start WhatsApp Follow Up
                     </button>
-                    <a
-                      href={getWhatsAppUrl(lead.phone)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 text-center text-xs py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 hover:text-emerald-900 transition-all font-bold rounded-lg min-w-[120px]"
-                    >
-                      WhatsApp
-                    </a>
                   </div>
                 </div>
               );
