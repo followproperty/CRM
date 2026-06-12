@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { SiteVisitStatus, LeadStatus, ILead } from "@/types/lead";
+import { SiteVisitStatus, LeadStatus, ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
 import { startNegotiationAction, markCustomerWonAction, markCustomerLostAction } from "@/app/actions/leads";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
@@ -329,10 +329,20 @@ export default function SiteVisitsDashboardView({
                         </div>
                       </td>
                       {/* Phone */}
-                      <td className="px-6 py-4 font-mono text-slate-600">
-                        <a href={`tel:${lead.phone}`} className="hover:text-purple-650 transition-colors">
-                          {lead.phone}
-                        </a>
+                      <td className="px-6 py-4 font-mono text-slate-605">
+                        <div className="flex items-center gap-2">
+                          <a href={`tel:${lead.phone}`} className="hover:text-purple-650 transition-colors">
+                            {lead.phone}
+                          </a>
+                          <a
+                            href={getWhatsAppUrl(lead.phone)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[10px] font-bold transition-all active:scale-[0.97]"
+                          >
+                            WhatsApp
+                          </a>
+                        </div>
                       </td>
                       {/* Assigned */}
                       <td className="px-6 py-4">
@@ -360,7 +370,7 @@ export default function SiteVisitsDashboardView({
                             Visit: {lead.siteVisitStatus ? lead.siteVisitStatus.replace("_", " ") : "UNKNOWN"}
                           </span>
                           <span className={`px-2 py-0.2 rounded border text-[9.5px] font-extrabold uppercase ${getLeadStatusStyles(lead.status)}`}>
-                            Lead: {lead.status.replace("_", " ")}
+                            Lead: {LEAD_STATUS_LABELS[lead.status] || lead.status}
                           </span>
                         </div>
                       </td>
@@ -413,7 +423,7 @@ export default function SiteVisitsDashboardView({
                                   disabled={isPending}
                                   className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                                 >
-                                  Negotiate
+                                  Send Payment Plan
                                 </button>
                               )}
 
@@ -423,7 +433,7 @@ export default function SiteVisitsDashboardView({
                                   disabled={isPending}
                                   className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                               >
-                                Won
+                                Sale Done
                               </button>
 
                               {/* 3. Customer Lost button */}
@@ -435,23 +445,23 @@ export default function SiteVisitsDashboardView({
                                 disabled={isPending}
                                 className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                               >
-                                Lost
+                                Sale Not Done
                               </button>
                             </div>
                           )
                         ) : lead.status === LeadStatus.CUSTOMER ? (
                           <div className="flex flex-col items-start text-emerald-650">
                             <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1">
-                              ✔ Customer Won
+                              ✔ Sale Done
                             </span>
                             {wonDateStr && (
-                              <span className="text-[10px] text-slate-400 font-mono">Won at: {wonDateStr}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">Completed at: {wonDateStr}</span>
                             )}
                           </div>
                         ) : lead.status === LeadStatus.LOST ? (
                           <div className="flex flex-col items-start text-rose-650">
                             <span className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
-                              ✘ Lost Account
+                              ✘ Sale Not Done
                             </span>
                             <span className="text-[10.5px] text-slate-450 italic">
                               Reason: {lead.lostReason || "Other"}
@@ -519,12 +529,12 @@ export default function SiteVisitsDashboardView({
                         Visit: {lead.siteVisitStatus ? lead.siteVisitStatus.replace("_", " ") : "UNKNOWN"}
                       </span>
                       <span className={`px-2 py-0.2 rounded border text-[8.5px] font-extrabold uppercase ${getLeadStatusStyles(lead.status)}`}>
-                        Lead: {lead.status.replace("_", " ")}
+                        Lead: {LEAD_STATUS_LABELS[lead.status] || lead.status}
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
                       <span className="text-slate-450 block mb-0.5 font-medium">Caller</span>
                       <span className="font-semibold text-slate-850 truncate block">
@@ -536,6 +546,22 @@ export default function SiteVisitsDashboardView({
                       <span className="font-mono text-slate-800 font-semibold block">
                         {visitDateStr}
                       </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-450 block mb-0.5 font-medium">Phone</span>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-purple-650 font-semibold truncate block">
+                          {lead.phone}
+                        </a>
+                        <a
+                          href={getWhatsAppUrl(lead.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-1 py-0.2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-250 text-emerald-700 rounded text-[9px] font-extrabold transition-all"
+                        >
+                          WA
+                        </a>
+                      </div>
                     </div>
                   </div>
 
@@ -588,7 +614,7 @@ export default function SiteVisitsDashboardView({
                               disabled={isPending}
                               className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                             >
-                              Negotiate
+                              Send Payment Plan
                             </button>
                           )}
 
@@ -598,7 +624,7 @@ export default function SiteVisitsDashboardView({
                             disabled={isPending}
                             className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                           >
-                            Won
+                            Sale Done
                           </button>
 
                           {/* 3. Customer Lost button */}
@@ -610,23 +636,23 @@ export default function SiteVisitsDashboardView({
                             disabled={isPending}
                             className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                           >
-                            Lost
+                            Sale Not Done
                           </button>
                         </div>
                       )
                     ) : lead.status === LeadStatus.CUSTOMER ? (
                       <div className="flex flex-col items-start text-emerald-650">
                         <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1">
-                          ✔ Customer Won
+                          ✔ Sale Done
                         </span>
                         {wonDateStr && (
-                          <span className="text-[10px] text-slate-450 font-mono mt-0.5">Won at: {wonDateStr}</span>
+                          <span className="text-[10px] text-slate-450 font-mono mt-0.5">Completed at: {wonDateStr}</span>
                         )}
                       </div>
                     ) : lead.status === LeadStatus.LOST ? (
                       <div className="flex flex-col items-start text-rose-650">
                         <span className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
-                          ✘ Lost Account
+                          ✘ Sale Not Done
                         </span>
                         <span className="text-[11px] text-slate-500 italic mt-0.5">
                           Reason: {lead.lostReason || "Other"}

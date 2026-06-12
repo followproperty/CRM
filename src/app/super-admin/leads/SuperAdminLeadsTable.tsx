@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { ILead } from "@/types/lead";
+import { ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
 import AssigneeSelect from "./AssigneeSelect";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 import { bulkAssignLeadsAction, autoDistributeLeadsAction } from "../../actions/leads";
@@ -300,7 +300,19 @@ export default function SuperAdminLeadsTable({ leads, eligibleUsers }: SuperAdmi
                           {lead.name}
                         </button>
                       </td>
-                      <td className="px-6 py-4 font-mono text-slate-605">{lead.phone}</td>
+                      <td className="px-6 py-4 font-mono text-slate-605">
+                        <div className="flex items-center gap-2">
+                          <span>{lead.phone}</span>
+                          <a
+                            href={getWhatsAppUrl(lead.phone, lead.country)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[10px] font-bold transition-all active:scale-[0.97]"
+                          >
+                            WhatsApp
+                          </a>
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-slate-800 font-medium">
@@ -315,7 +327,7 @@ export default function SuperAdminLeadsTable({ leads, eligibleUsers }: SuperAdmi
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusStyles(lead.status)}`}>
-                          {lead.status.replace("_", " ")}
+                          {LEAD_STATUS_LABELS[lead.status] || lead.status}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -373,19 +385,29 @@ export default function SuperAdminLeadsTable({ leads, eligibleUsers }: SuperAdmi
                     </div>
                     {/* Status */}
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${getStatusStyles(lead.status)}`}>
-                      {lead.status.replace("_", " ")}
+                      {LEAD_STATUS_LABELS[lead.status] || lead.status}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-xs pl-7.5">
                     <div>
                       <span className="text-slate-450 block mb-0.5 font-medium">Phone</span>
-                      <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-purple-655 font-semibold flex items-center gap-1">
-                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        {lead.phone}
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-purple-655 font-semibold flex items-center gap-1">
+                          <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          {lead.phone}
+                        </a>
+                        <a
+                          href={getWhatsAppUrl(lead.phone, lead.country)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-1.5 py-0.2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[9px] font-extrabold transition-all active:scale-[0.97]"
+                        >
+                          WhatsApp
+                        </a>
+                      </div>
                     </div>
                     <div>
                       <span className="text-slate-455 block mb-0.5 font-medium">Source</span>

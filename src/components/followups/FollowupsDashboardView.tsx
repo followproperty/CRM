@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LeadStatus, ILead } from "@/types/lead";
+import { LeadStatus, ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
 interface PopulatedLead {
@@ -140,7 +140,7 @@ export default function FollowupsDashboardView({
             <option value="ALL">All Statuses</option>
             {Object.values(LeadStatus).map((status) => (
               <option key={status} value={status}>
-                {status.replace("_", " ")}
+                {LEAD_STATUS_LABELS[status] || status}
               </option>
             ))}
           </select>
@@ -259,9 +259,19 @@ export default function FollowupsDashboardView({
                     </td>
                     {/* Phone */}
                     <td className="px-6 py-4 font-mono text-slate-600">
-                      <a href={`tel:${lead.phone}`} className="hover:text-indigo-600 transition-colors">
-                        {lead.phone}
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={`tel:${lead.phone}`} className="hover:text-indigo-600 transition-colors">
+                          {lead.phone}
+                        </a>
+                        <a
+                          href={getWhatsAppUrl(lead.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[10px] font-bold transition-all active:scale-[0.97]"
+                        >
+                          WhatsApp
+                        </a>
+                      </div>
                     </td>
                     {/* Assigned */}
                     <td className="px-6 py-4">
@@ -277,7 +287,7 @@ export default function FollowupsDashboardView({
                     {/* Status */}
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold ${getStatusStyles(lead.status)}`}>
-                        {lead.status.replace("_", " ")}
+                        {LEAD_STATUS_LABELS[lead.status] || lead.status}
                       </span>
                     </td>
                     {/* Next Followup */}
@@ -330,19 +340,29 @@ export default function FollowupsDashboardView({
                     </button>
                     {/* Status */}
                     <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${getStatusStyles(lead.status)}`}>
-                      {lead.status.replace("_", " ")}
+                      {LEAD_STATUS_LABELS[lead.status] || lead.status}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <span className="text-slate-450 block mb-0.5 font-medium">Phone</span>
-                      <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-indigo-650 font-semibold flex items-center gap-1">
-                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        {lead.phone}
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={`tel:${lead.phone}`} className="font-mono text-slate-800 hover:text-indigo-650 font-semibold flex items-center gap-1">
+                          <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          {lead.phone}
+                        </a>
+                        <a
+                          href={getWhatsAppUrl(lead.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-1.5 py-0.2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[9px] font-extrabold transition-all active:scale-[0.97]"
+                        >
+                          WhatsApp
+                        </a>
+                      </div>
                     </div>
                     <div>
                       <span className="text-slate-450 block mb-0.5 font-medium">Caller</span>

@@ -2,7 +2,7 @@
 
 import React, { useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LeadStatus } from "@/types/lead";
+import { LeadStatus, LEAD_STATUS_LABELS } from "@/types/lead";
 
 export default function LeadsFilters() {
   const router = useRouter();
@@ -65,7 +65,7 @@ export default function LeadsFilters() {
             <option value="ALL">All Statuses</option>
             {Object.values(LeadStatus).map((status) => (
               <option key={status} value={status}>
-                {status.replace("_", " ")}
+                {LEAD_STATUS_LABELS[status] || status.replace("_", " ")}
               </option>
             ))}
           </select>

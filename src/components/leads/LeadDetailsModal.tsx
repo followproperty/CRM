@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { getLeadNotesAction, addLeadNoteAction, PopulatedNote } from "@/app/actions/notes";
-import { ILead, LeadStatus } from "@/types/lead";
+import { ILead, LeadStatus, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
 import { UserRole } from "@/types/user";
 
 interface LeadDetailsModalProps {
@@ -174,8 +174,16 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Phone</label>
-                  <p className="font-mono text-slate-700">
-                    <a href={`tel:${lead.phone}`} className="hover:text-purple-650 hover:underline transition-all">{lead.phone}</a>
+                  <p className="font-mono text-slate-700 flex items-center gap-2">
+                    <a href={`tel:${lead.phone}`} className="hover:text-purple-650 hover:underline transition-all font-semibold">{lead.phone}</a>
+                    <a
+                      href={getWhatsAppUrl(lead.phone, lead.country)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[10px] font-bold transition-all active:scale-[0.97]"
+                    >
+                      WhatsApp
+                    </a>
                   </p>
                 </div>
                 <div>
@@ -190,7 +198,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
                   <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</label>
                   <div className="mt-0.5">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusStyles(lead.status)}`}>
-                      {lead.status.replace("_", " ")}
+                      {LEAD_STATUS_LABELS[lead.status] || lead.status}
                     </span>
                   </div>
                 </div>

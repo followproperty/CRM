@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { updateLeadStatusAction, scheduleSiteVisitAction, requestWhatsAppFollowupAction } from "@/app/actions/leads";
-import { LeadStatus, ILead } from "@/types/lead";
+import { LeadStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
 import { UserRole } from "@/types/user";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
@@ -69,6 +69,11 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
     
+    if (status === LeadStatus.NOT_INTERESTED && !outcomeNote.trim()) {
+      showMessage("Please enter notes / reason for Not Interested status.", true);
+      return;
+    }
+
     // For Follow Up (Call Later), bridge to the Callback Modal
     if (status === LeadStatus.FOLLOW_UP) {
       setCallbackLead(lead);
@@ -81,7 +86,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote);
       if (result.success) {
-        showMessage(`Status logged as ${status.replace("_", " ")}.`);
+        showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
         setActiveOutcomeLead(null);
         setOutcomeNote("");
       } else {
@@ -208,7 +213,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {/* Status */}
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-extrabold uppercase tracking-wider ${getStatusStyles(lead.status)}`}>
-                          {lead.status.replace("_", " ")}
+                          {LEAD_STATUS_LABELS[lead.status] || lead.status}
                         </span>
                       </td>
                       {/* Actions */}
@@ -283,7 +288,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                     </a>
                   </div>
                   <span className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${getStatusStyles(lead.status)}`}>
-                    {lead.status.replace("_", " ")}
+                    {LEAD_STATUS_LABELS[lead.status] || lead.status}
                   </span>
                 </div>
 

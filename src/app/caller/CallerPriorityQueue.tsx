@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { LeadStatus, FollowUpStatus, ILead } from "@/types/lead";
+import { LeadStatus, FollowUpStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
 import { updateLeadStatusAction, requestWhatsAppFollowupAction, scheduleSiteVisitAction } from "@/app/actions/leads";
 import { UserRole } from "@/types/user";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
@@ -82,6 +82,11 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
     
+    if (status === LeadStatus.NOT_INTERESTED && !outcomeNote.trim()) {
+      showMessage("Please enter notes / reason for Not Interested status.", true);
+      return;
+    }
+
     // For Follow Up, bridge to the Callback Modal
     if (status === LeadStatus.FOLLOW_UP) {
       setCallbackLead(lead);
@@ -94,7 +99,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote);
       if (result.success) {
-        showMessage(`Status logged as ${status.replace("_", " ")}.`);
+        showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
         setActiveOutcomeLead(null);
         setOutcomeNote("");
       } else {
@@ -265,7 +270,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                             : "bg-slate-50 text-slate-605 border border-slate-200"
                         }`}
                       >
-                        {lead.status.replace("_", " ")}
+                        {LEAD_STATUS_LABELS[lead.status] || lead.status}
                       </span>
                     </div>
 
