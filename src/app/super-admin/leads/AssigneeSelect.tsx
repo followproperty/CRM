@@ -50,6 +50,10 @@ export default function AssigneeSelect({
         <option value="">Unassigned</option>
         {eligibleUsers.map((user) => {
           const isCaller = user.role === "CALLER";
+          /*
+            Comment/skip the 0/infinity (admin) option, keep only the three callers for now
+          */
+          if (!isCaller) return null;
           const count = user.activeCount ?? 0;
           const isFull = isCaller && count >= activeCap;
           const isDisabled = isFull && user._id !== currentAssigneeId;

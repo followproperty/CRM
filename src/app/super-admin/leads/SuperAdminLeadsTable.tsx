@@ -294,6 +294,10 @@ export default function SuperAdminLeadsTable({
               <option value="">-- Choose Caller --</option>
               {eligibleUsers.map((user) => {
                 const isCaller = user.role === "CALLER";
+                /*
+                  Comment/skip the 0/infinity (admin) option, keep only the three callers for now
+                */
+                if (!isCaller) return null;
                 const isFull = isCaller && user.activeCount >= activeCap;
                 return (
                   <option key={user._id} value={user._id} disabled={isFull}>
@@ -421,6 +425,10 @@ export default function SuperAdminLeadsTable({
                   <option value="">Unassigned / Remove</option>
                   {eligibleUsers.map((user) => {
                     const isCaller = user.role === "CALLER";
+                    /*
+                      Comment/skip the 0/infinity (admin) option, keep only the three callers for now
+                    */
+                    if (!isCaller) return null;
                     const isFull = isCaller && user.activeCount >= activeCap;
                     return (
                       <option key={user._id} value={user._id} disabled={isFull}>
