@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-06-12T04:36:44.393Z",
+  "totalLeadsInDatabase": 26,
+  "recordsProcessed": 26,
+  "recordsMigrated": 26,
+  "recordsMissingPhone": {
+    "count": 0,
+    "leads": []
+  },
+  "recordsMissingEmail": {
+    "count": 26,
+    "leads": [
+      {
+        "id": "6a2a4ac78231f681558e0fb4",
+        "name": "Ritesh Test"
+      },
+      {
+        "id": "6a2a5d3599a0c7c3cdf0baaa",
+        "name": "Ramesh Patel"
+      },
+      {
+        "id": "6a2a5d3599a0c7c3cdf0baab",
+        "name": "Priya Sharma"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0baac",
+        "name": "Amit Kumar"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0baad",
+        "name": "Ananya Iyer"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0baae",
+        "name": "Vikram Singh"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0baaf",
+        "name": "Sneha Reddy"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab0",
+        "name": "Rajesh Gupta"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab1",
+        "name": "Pooja Mehta"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab2",
+        "name": "Sanjay Verma"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab3",
+        "name": "Divya Rao"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab4",
+        "name": "Manish Joshi"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab5",
+        "name": "Neha Gupta"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab6",
+        "name": "Sunil Nair"
+      },
+      {
+        "id": "6a2a5d3699a0c7c3cdf0bab7",
+        "name": "Swati Deshmukh"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0bab8",
+        "name": "Alok Mishra"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0bab9",
+        "name": "Ritu Chaudhary"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0baba",
+        "name": "Suresh Pillai"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0babb",
+        "name": "Kavita Sen"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0babc",
+        "name": "Pankaj Sharma"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0babd",
+        "name": "Preeti Bhat"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0babe",
+        "name": "Manoj Kulkarni"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0babf",
+        "name": "Geeta Malhotra"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0bac0",
+        "name": "Gaurav Saxena"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0bac1",
+        "name": "Deepa Nair"
+      },
+      {
+        "id": "6a2a5d3799a0c7c3cdf0bac2",
+        "name": "Harish Patel"
+      }
+    ]
+  }
+}

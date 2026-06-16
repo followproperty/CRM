@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import Lead, { getLeadModel } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { UserRole, IUser } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
@@ -10,25 +10,42 @@ export const revalidate = 0;
 export default async function AdminDashboard() {
   await dbConnect();
 
-  // 1. Fetch metrics from DB
-  const totalLeads = await Lead.countDocuments({});
-  const unassignedLeads = await Lead.countDocuments({ assignedTo: null });
+  // 1. Fetch metrics from DB (summed across both collections)
+  const [
+    totalLeadsDirect, totalLeadsUploaded,
+    unassignedLeadsDirect, unassignedLeadsUploaded,
+    dealsClosedDirect, dealsClosedUploaded
+  ] = await Promise.all([
+    getLeadModel("leads").countDocuments({}),
+    getLeadModel("uploaded_leads").countDocuments({}),
+    getLeadModel("leads").countDocuments({ assignedTo: null }),
+    getLeadModel("uploaded_leads").countDocuments({ assignedTo: null }),
+    getLeadModel("leads").countDocuments({ status: LeadStatus.CUSTOMER }),
+    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.CUSTOMER })
+  ]);
+
+  const totalLeads = totalLeadsDirect + totalLeadsUploaded;
+  const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded;
   const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true });
-  const dealsClosed = await Lead.countDocuments({ status: LeadStatus.CUSTOMER });
+  const dealsClosed = dealsClosedDirect + dealsClosedUploaded;
 
   // 2. Fetch caller team details with live assigned / won stats
   const callers = (await User.find({ role: UserRole.CALLER }).lean()) as unknown as IUser[];
   const callersWithStats = await Promise.all(
     callers.map(async (caller: IUser) => {
-      const assignedCount = await Lead.countDocuments({ assignedTo: caller._id });
-      const wonCount = await Lead.countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER });
+      const [assignedDirect, assignedUploaded, wonDirect, wonUploaded] = await Promise.all([
+        getLeadModel("leads").countDocuments({ assignedTo: caller._id }),
+        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id }),
+        getLeadModel("leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER }),
+        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER })
+      ]);
       return {
         id: caller._id ? caller._id.toString() : "",
         name: caller.name,
         email: caller.email,
         isActive: caller.isActive,
-        assignedCount,
-        wonCount,
+        assignedCount: assignedDirect + assignedUploaded,
+        wonCount: wonDirect + wonUploaded,
       };
     })
   );
@@ -39,19 +56,29 @@ export default async function AdminDashboard() {
     count: number;
   }
 
-  const sourceStats = (await Lead.aggregate([
-    { $group: { _id: "$source", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-  ])) as unknown as SourceStat[];
+  const [sourceStatsDirect, sourceStatsUploaded] = await Promise.all([
+    getLeadModel("leads").aggregate([
+      { $group: { _id: "$source", count: { $sum: 1 } } }
+    ]),
+    getLeadModel("uploaded_leads").aggregate([
+      { $group: { _id: "$source", count: { $sum: 1 } } }
+    ])
+  ]);
 
-  const sources = sourceStats.map((stat: SourceStat) => {
-    const pct = totalLeads > 0 ? Math.round((stat.count / totalLeads) * 100) : 0;
-    return {
-      name: stat._id || "Unknown/Direct",
-      count: stat.count,
-      percentage: pct,
-    };
+  // Merge sourceStats
+  const mergedSourceCounts: Record<string, number> = {};
+  [...sourceStatsDirect, ...sourceStatsUploaded].forEach((stat: any) => {
+    const key = stat._id || "Unknown/Direct";
+    mergedSourceCounts[key] = (mergedSourceCounts[key] || 0) + stat.count;
   });
+
+  const sources = Object.entries(mergedSourceCounts)
+    .map(([name, count]) => {
+      const pct = totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0;
+      return { name, count, percentage: pct };
+    })
+    .sort((a, b) => b.count - a.count);
+
 
   return (
     <div className="space-y-6">

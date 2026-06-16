@@ -23,6 +23,7 @@ export interface PopulatedWhatsAppLead {
   email?: string;
   city?: string;
   state?: string;
+  collectionType?: string;
 }
 
 interface WhatsAppFollowupsViewProps {
@@ -74,9 +75,9 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
     });
   }
 
-  const handleMarkDetailsSent = (leadId: string) => {
+  const handleMarkDetailsSent = (leadId: string, collectionType?: string) => {
     startTransition(async () => {
-      const result = await markWhatsAppDetailsSentAction(leadId);
+      const result = await markWhatsAppDetailsSentAction(leadId, collectionType);
       if (result.success) {
         showMessage("Lead status updated: WhatsApp details successfully sent.");
       } else {
@@ -85,9 +86,9 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
     });
   };
 
-  const handleStartFollowup = (leadId: string) => {
+  const handleStartFollowup = (leadId: string, collectionType?: string) => {
     startTransition(async () => {
-      const result = await startAdminFollowupAction(leadId);
+      const result = await startAdminFollowupAction(leadId, collectionType);
       if (result.success) {
         showMessage("Lead status updated: Admin WhatsApp follow-up started.");
       } else {
@@ -249,7 +250,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                         <div className="flex flex-col sm:flex-row items-center gap-2">
                           <div className="flex items-center gap-1 w-full sm:w-auto">
                             <button
-                              onClick={() => handleMarkDetailsSent(leadId)}
+                              onClick={() => handleMarkDetailsSent(leadId, lead.collectionType)}
                               disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
                               className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
                             >
@@ -268,9 +269,9 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                             </a>
                           </div>
                           <button
-                            onClick={() => handleStartFollowup(leadId)}
+                            onClick={() => handleStartFollowup(leadId, lead.collectionType)}
                             disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
-                            className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                            className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-705 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                           >
                             Start WhatsApp Follow Up
                           </button>
@@ -367,7 +368,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                   <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100/70">
                     <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
                       <button
-                        onClick={() => handleMarkDetailsSent(leadId)}
+                        onClick={() => handleMarkDetailsSent(leadId, lead.collectionType)}
                         disabled={isPending || lead.status === LeadStatus.WHATSAPP_SHARED}
                         className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -386,7 +387,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                       </a>
                     </div>
                     <button
-                      onClick={() => handleStartFollowup(leadId)}
+                      onClick={() => handleStartFollowup(leadId, lead.collectionType)}
                       disabled={isPending || lead.status === LeadStatus.ADMIN_FOLLOWUP}
                       className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                     >

@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import { Lead, UploadedLead } from "@/models/lead.model";
 import { UserRole } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
 import FollowupsDashboardView from "@/components/followups/FollowupsDashboardView";
@@ -22,11 +22,13 @@ interface DBLead {
   phone: string;
   status: LeadStatus;
   nextFollowUp?: Date;
+  updatedAt?: Date;
   assignedTo?: {
     name: string;
     email: string;
   } | null;
   source: string;
+  collectionType?: string;
 }
 
 export default async function SuperAdminFollowupsPage({ searchParams }: PageProps) {
@@ -69,46 +71,90 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
     // Queries
     // 1. Interested Leads (Only query if no conflicting statusFilter)
     if (statusFilter === "ALL" || statusFilter === LeadStatus.INTERESTED) {
-      const docs = await Lead.find({ ...baseFilter, status: LeadStatus.INTERESTED })
-        .populate("assignedTo", "name email")
-        .sort({ updatedAt: -1 })
-        .lean();
-      interestedLeads = docs as unknown as DBLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean(),
+        UploadedLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      interestedLeads = merged as unknown as DBLead[];
     }
 
     // 2. Call Later Leads
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const docs = await Lead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP })
-        .populate("assignedTo", "name email")
-        .sort({ nextFollowUp: 1 })
-        .lean();
-      callLaterLeads = docs as unknown as DBLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean(),
+        UploadedLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
+        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
+        return dateA - dateB;
+      });
+      callLaterLeads = merged as unknown as DBLead[];
     }
 
     // 3. Today's Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const docs = await Lead.find({
-        ...baseFilter,
-        status: LeadStatus.FOLLOW_UP,
-        nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
-      })
-        .populate("assignedTo", "name email")
-        .sort({ nextFollowUp: 1 })
-        .lean();
-      todaysFollowups = docs as unknown as DBLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+        }).populate("assignedTo", "name email").lean(),
+        UploadedLead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+        }).populate("assignedTo", "name email").lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
+        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
+        return dateA - dateB;
+      });
+      todaysFollowups = merged as unknown as DBLead[];
     }
 
     // 4. Overdue Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const docs = await Lead.find({
-        ...baseFilter,
-        status: LeadStatus.FOLLOW_UP,
-        nextFollowUp: { $lt: startOfToday },
-      })
-        .populate("assignedTo", "name email")
-        .sort({ nextFollowUp: 1 })
-        .lean();
-      overdueFollowups = docs as unknown as DBLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $lt: startOfToday },
+        }).populate("assignedTo", "name email").lean(),
+        UploadedLead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $lt: startOfToday },
+        }).populate("assignedTo", "name email").lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
+        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
+        return dateA - dateB;
+      });
+      overdueFollowups = merged as unknown as DBLead[];
     }
   } catch (err) {
     console.error("Failed to fetch follow-ups in super-admin dashboard:", err);
@@ -128,6 +174,7 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
         }
       : null,
     source: l.source,
+    collectionType: l.collectionType,
   });
 
   return (

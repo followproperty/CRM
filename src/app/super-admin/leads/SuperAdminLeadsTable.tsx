@@ -28,7 +28,7 @@ interface SuperAdminLeadsTableProps {
   currentPage: number;
   totalPages: number;
   totalUnassignedCount: number;
-  oldestUnassignedIds: string[];
+  oldestUnassignedLeads: { _id: string; collectionType: string }[];
 }
 
 function getStatusStyles(status: string) {
@@ -63,7 +63,7 @@ export default function SuperAdminLeadsTable({
   currentPage,
   totalPages,
   totalUnassignedCount,
-  oldestUnassignedIds,
+  oldestUnassignedLeads,
 }: SuperAdminLeadsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -86,12 +86,12 @@ export default function SuperAdminLeadsTable({
   const [quickAssigneeId, setQuickAssigneeId] = useState<string>("");
   const [quickQuantity, setQuickQuantity] = useState<number>(10);
 
-  // Sync quickQuantity with oldestUnassignedIds when component mounts or oldestUnassignedIds changes
+  // Sync quickQuantity with oldestUnassignedLeads when component mounts or oldestUnassignedLeads changes
   useEffect(() => {
-    if (oldestUnassignedIds.length > 0) {
-      setQuickQuantity(Math.min(oldestUnassignedIds.length, 80));
+    if (oldestUnassignedLeads.length > 0) {
+      setQuickQuantity(Math.min(oldestUnassignedLeads.length, 80));
     }
-  }, [oldestUnassignedIds]);
+  }, [oldestUnassignedLeads]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -119,13 +119,31 @@ export default function SuperAdminLeadsTable({
 
   const handleBulkAssign = () => {
     if (selectedIds.length === 0) return;
+    const selectedLeadsWithCol = selectedIds.map(id => {
+      const lead = leads.find(l => l._id?.toString() === id);
+      return { _id: id, collectionType: lead?.collectionType || "leads" };
+    });
+
     startTransition(async () => {
-      const result = await bulkAssignLeadsAction(selectedIds, bulkAssigneeId === "" ? null : bulkAssigneeId);
-      if (result.success) {
+      const leadsByCollection = selectedLeadsWithCol.reduce((acc, lead) => {
+        const col = lead.collectionType;
+        if (!acc[col]) acc[col] = [];
+        acc[col].push(lead._id);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      const promises = Object.entries(leadsByCollection).map(([colType, ids]) =>
+        bulkAssignLeadsAction(ids, bulkAssigneeId === "" ? null : bulkAssigneeId, colType)
+      );
+      const results = await Promise.all(promises);
+      const allSuccess = results.every(r => r.success);
+
+      if (allSuccess) {
         setMessage({ text: `Successfully updated ${selectedIds.length} lead(s).`, isError: false });
         setSelectedIds([]);
       } else {
-        setMessage({ text: result.error || "Failed to bulk assign leads.", isError: true });
+        const firstError = results.find(r => !r.success)?.error;
+        setMessage({ text: firstError || "Failed to bulk assign leads.", isError: true });
       }
     });
   };
@@ -145,20 +163,45 @@ export default function SuperAdminLeadsTable({
       return;
     }
 
+    const selectedLeadsWithCol = leadsToDistribute.map(id => {
+      const lead = leads.find(l => l._id?.toString() === id);
+      return { _id: id, collectionType: lead?.collectionType || "leads" };
+    });
+
     startTransition(async () => {
-      const result = await autoDistributeLeadsAction(leadsToDistribute, activeCap);
-      if (result.success) {
-        let text = `Auto-distribution complete! Assigned: ${result.assignedCount}.`;
-        if (result.unassignedCount > 0) {
-          text += ` Remaining Unassigned: ${result.unassignedCount}. Reason: ${result.reason || "All callers at capacity."}`;
+      const leadsByCollection = selectedLeadsWithCol.reduce((acc, lead) => {
+        const col = lead.collectionType;
+        if (!acc[col]) acc[col] = [];
+        acc[col].push(lead._id);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      let totalAssigned = 0;
+      let totalUnassigned = 0;
+      let firstError: string | undefined;
+
+      for (const [colType, ids] of Object.entries(leadsByCollection)) {
+        const result = await autoDistributeLeadsAction(ids, activeCap, colType);
+        if (result.success) {
+          totalAssigned += result.assignedCount;
+          totalUnassigned += result.unassignedCount;
+        } else {
+          firstError = result.error;
+        }
+      }
+
+      if (firstError) {
+        setMessage({ text: firstError, isError: true });
+      } else {
+        let text = `Auto-distribution complete! Assigned: ${totalAssigned}.`;
+        if (totalUnassigned > 0) {
+          text += ` Remaining Unassigned: ${totalUnassigned}.`;
         }
         setMessage({
           text,
-          isError: result.unassignedCount > 0,
+          isError: totalUnassigned > 0,
         });
         setSelectedIds([]);
-      } else {
-        setMessage({ text: result.error || "Failed to auto-distribute leads.", isError: true });
       }
     });
   };
@@ -172,25 +215,40 @@ export default function SuperAdminLeadsTable({
       setMessage({ text: "Please enter a valid quantity.", isError: true });
       return;
     }
-    const idsToAssign = oldestUnassignedIds.slice(0, quickQuantity);
-    if (idsToAssign.length === 0) {
+    const leadsToAssign = oldestUnassignedLeads.slice(0, quickQuantity);
+    if (leadsToAssign.length === 0) {
       setMessage({ text: "No unassigned leads available for quick allocation.", isError: true });
       return;
     }
 
     startTransition(async () => {
-      const result = await bulkAssignLeadsAction(idsToAssign, quickAssigneeId);
-      if (result.success) {
+      const leadsByCollection = leadsToAssign.reduce((acc, lead) => {
+        const col = lead.collectionType;
+        if (!acc[col]) {
+          acc[col] = [];
+        }
+        acc[col].push(lead._id);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      const promises = Object.entries(leadsByCollection).map(([colType, ids]) =>
+        bulkAssignLeadsAction(ids, quickAssigneeId, colType)
+      );
+      const results = await Promise.all(promises);
+      const allSuccess = results.every(r => r.success);
+
+      if (allSuccess) {
         setMessage({
-          text: `Successfully quick allocated ${idsToAssign.length} oldest lead(s) to ${
+          text: `Successfully quick allocated ${leadsToAssign.length} oldest lead(s) to ${
             eligibleUsers.find((u) => u._id === quickAssigneeId)?.name
           }.`,
           isError: false,
         });
-        // Clear quick selection
-        setSelectedIds(prev => prev.filter(id => !idsToAssign.includes(id)));
+        const assignedIds = leadsToAssign.map(l => l._id);
+        setSelectedIds(prev => prev.filter(id => !assignedIds.includes(id)));
       } else {
-        setMessage({ text: result.error || "Failed to quick allocate leads.", isError: true });
+        const firstError = results.find(r => !r.success)?.error;
+        setMessage({ text: firstError || "Failed to quick allocate leads.", isError: true });
       }
     });
   };
@@ -286,7 +344,7 @@ export default function SuperAdminLeadsTable({
                 const caller = eligibleUsers.find(u => u._id === e.target.value);
                 if (caller) {
                   const remaining = Math.max(0, activeCap - caller.activeCount);
-                  setQuickQuantity(Math.min(remaining, oldestUnassignedIds.length, 80) || 10);
+                  setQuickQuantity(Math.min(remaining, oldestUnassignedLeads.length, 80) || 10);
                 }
               }}
               className="w-full bg-slate-50 border border-slate-205 rounded-lg px-3 py-2 text-sm text-slate-850 focus:outline-none focus:border-indigo-500 cursor-pointer"
@@ -314,7 +372,7 @@ export default function SuperAdminLeadsTable({
               id="quick-qty-input"
               type="number"
               min={1}
-              max={oldestUnassignedIds.length || 200}
+              max={oldestUnassignedLeads.length || 200}
               value={quickQuantity}
               onChange={(e) => setQuickQuantity(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full bg-slate-50 border border-slate-205 rounded-lg px-3 py-2 text-sm text-slate-850 font-semibold focus:outline-none focus:border-indigo-500 text-center"
@@ -323,7 +381,7 @@ export default function SuperAdminLeadsTable({
 
           <button
             onClick={handleQuickAllocate}
-            disabled={isPending || !quickAssigneeId || oldestUnassignedIds.length === 0}
+            disabled={isPending || !quickAssigneeId || oldestUnassignedLeads.length === 0}
             className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-slate-100 disabled:text-slate-400 font-bold rounded-lg text-sm shadow-sm transition-all active:scale-[0.98] h-10 flex items-center justify-center cursor-pointer"
           >
             {isPending ? "Allocating..." : "Assign Leads"}
@@ -334,7 +392,7 @@ export default function SuperAdminLeadsTable({
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>
-            Oldest unassigned leads ready in pool: <span className="font-bold text-slate-550">{oldestUnassignedIds.length}</span> (allocation will fetch from this queue first)
+            Oldest unassigned leads ready in pool: <span className="font-bold text-slate-550">{oldestUnassignedLeads.length}</span> (allocation will fetch from this queue first)
           </span>
         </div>
       </div>
@@ -576,6 +634,7 @@ export default function SuperAdminLeadsTable({
                             currentAssigneeId={lead.assignedTo?._id?.toString() || ""}
                             eligibleUsers={eligibleUsers}
                             activeCap={activeCap}
+                            collectionType={lead.collectionType}
                           />
                         </td>
                         <td className="px-6 py-4 text-xs text-slate-400 font-medium">{formattedDate}</td>
@@ -667,6 +726,7 @@ export default function SuperAdminLeadsTable({
                         currentAssigneeId={lead.assignedTo?._id?.toString() || ""}
                         eligibleUsers={eligibleUsers}
                         activeCap={activeCap}
+                        collectionType={lead.collectionType}
                       />
                     </div>
 

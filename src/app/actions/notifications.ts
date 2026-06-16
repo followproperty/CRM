@@ -3,7 +3,7 @@
 import dbConnect from "@/lib/db";
 import Notification from "@/models/notification.model";
 import User from "@/models/user.model";
-import Lead from "@/models/lead.model";
+import Lead, { getLeadModel } from "@/models/lead.model";
 import { getSession } from "@/lib/session";
 import { UserRole } from "@/types/user";
 import { LeadStatus, ILead } from "@/types/lead";
@@ -216,14 +216,23 @@ async function checkAndCreateFollowUpNotifications(userId: string) {
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   try {
-    // Find active leads assigned to the user that require follow-up today
-    const leadsDueToday = await Lead.find({
-      assignedTo: userId,
-      status: LeadStatus.FOLLOW_UP,
-      nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
-    });
+    // Find active leads assigned to the user that require follow-up today from both collections
+    const [leadsDueToday, uploadedLeadsDueToday] = await Promise.all([
+      getLeadModel("leads").find({
+        assignedTo: userId,
+        status: LeadStatus.FOLLOW_UP,
+        nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+      }),
+      getLeadModel("uploaded_leads").find({
+        assignedTo: userId,
+        status: LeadStatus.FOLLOW_UP,
+        nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+      })
+    ]);
 
-    for (const lead of leadsDueToday) {
+    const allLeadsDueToday = [...leadsDueToday, ...uploadedLeadsDueToday];
+
+    for (const lead of allLeadsDueToday) {
       // Check if a "Follow-up Due Today" notification already exists for today
       const alreadyNotified = await Notification.findOne({
         userId,

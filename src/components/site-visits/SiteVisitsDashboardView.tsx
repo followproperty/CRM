@@ -25,6 +25,7 @@ interface PopulatedSiteVisitLead {
   wonAt?: string | Date;
   lostAt?: string | Date;
   lostReason?: string;
+  collectionType?: string;
 }
 
 interface SiteVisitsDashboardViewProps {
@@ -119,9 +120,9 @@ export default function SiteVisitsDashboardView({
     });
   }
 
-  const handleStartNegotiation = (leadId: string) => {
+  const handleStartNegotiation = (leadId: string, collectionType?: string) => {
     startTransition(async () => {
-      const result = await startNegotiationAction(leadId);
+      const result = await startNegotiationAction(leadId, collectionType);
       if (result.success) {
         showMessage("Lead workflow status updated to Negotiation.");
       } else {
@@ -130,9 +131,9 @@ export default function SiteVisitsDashboardView({
     });
   };
 
-  const handleMarkWon = (leadId: string) => {
+  const handleMarkWon = (leadId: string, collectionType?: string) => {
     startTransition(async () => {
-      const result = await markCustomerWonAction(leadId);
+      const result = await markCustomerWonAction(leadId, collectionType);
       if (result.success) {
         showMessage("Congratulations! Customer has been Won!");
       } else {
@@ -141,9 +142,9 @@ export default function SiteVisitsDashboardView({
     });
   };
 
-  const handleConfirmLost = (leadId: string) => {
+  const handleConfirmLost = (leadId: string, collectionType?: string) => {
     startTransition(async () => {
-      const result = await markCustomerLostAction(leadId, selectedReason);
+      const result = await markCustomerLostAction(leadId, selectedReason, collectionType);
       if (result.success) {
         showMessage(`Lead marked as Lost (${selectedReason}).`);
         setLostReasonLeadId(null);
@@ -406,7 +407,7 @@ export default function SiteVisitsDashboardView({
                                 <button
                                   type="button"
                                   disabled={isPending}
-                                  onClick={() => handleConfirmLost(leadId)}
+                                  onClick={() => handleConfirmLost(leadId, lead.collectionType)}
                                   className="px-2.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-bold cursor-pointer"
                                 >
                                   Confirm
@@ -419,7 +420,7 @@ export default function SiteVisitsDashboardView({
                               {/* 1. Negotiation button (only shown if lead is in SITE_VISIT status) */}
                               {lead.status === LeadStatus.SITE_VISIT && (
                                 <button
-                                  onClick={() => handleStartNegotiation(leadId)}
+                                  onClick={() => handleStartNegotiation(leadId, lead.collectionType)}
                                   disabled={isPending}
                                   className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                                 >
@@ -429,7 +430,7 @@ export default function SiteVisitsDashboardView({
 
                               {/* 2. Customer Won button */}
                               <button
-                                  onClick={() => handleMarkWon(leadId)}
+                                  onClick={() => handleMarkWon(leadId, lead.collectionType)}
                                   disabled={isPending}
                                   className="text-xs px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                               >
@@ -597,7 +598,7 @@ export default function SiteVisitsDashboardView({
                             <button
                               type="button"
                               disabled={isPending}
-                              onClick={() => handleConfirmLost(leadId)}
+                              onClick={() => handleConfirmLost(leadId, lead.collectionType)}
                               className="px-3.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold cursor-pointer"
                             >
                               Confirm
@@ -610,7 +611,7 @@ export default function SiteVisitsDashboardView({
                           {/* 1. Negotiation button */}
                           {lead.status === LeadStatus.SITE_VISIT && (
                             <button
-                              onClick={() => handleStartNegotiation(leadId)}
+                              onClick={() => handleStartNegotiation(leadId, lead.collectionType)}
                               disabled={isPending}
                               className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                             >
@@ -620,7 +621,7 @@ export default function SiteVisitsDashboardView({
 
                           {/* 2. Customer Won button */}
                           <button
-                            onClick={() => handleMarkWon(leadId)}
+                            onClick={() => handleMarkWon(leadId, lead.collectionType)}
                             disabled={isPending}
                             className="flex-1 text-center text-xs py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 transition-all font-medium rounded-lg cursor-pointer"
                           >

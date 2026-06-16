@@ -97,7 +97,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     }
 
     startTransition(async () => {
-      const result = await updateLeadStatusAction(leadId, status, null, outcomeNote);
+      const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
         setActiveOutcomeLead(null);
@@ -111,7 +111,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const handleRequestWhatsApp = (lead: ILead) => {
     const leadId = lead._id ? lead._id.toString() : "";
     startTransition(async () => {
-      const result = await requestWhatsAppFollowupAction(leadId);
+      const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
       if (result.success) {
         showMessage("WhatsApp follow-up requested with Admin.");
         setActiveOutcomeLead(null);
@@ -128,7 +128,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     
     const leadId = callbackLead._id ? callbackLead._id.toString() : "";
     startTransition(async () => {
-      const result = await updateLeadStatusAction(leadId, LeadStatus.FOLLOW_UP, callbackDate, callbackNote);
+      const result = await updateLeadStatusAction(leadId, LeadStatus.FOLLOW_UP, callbackDate, callbackNote, callbackLead.collectionType);
       if (result.success) {
         showMessage("Follow-up callback scheduled successfully.");
         setCallbackLead(null);
@@ -146,7 +146,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     const leadId = siteVisitLead._id ? siteVisitLead._id.toString() : "";
     startTransition(async () => {
-      const result = await scheduleSiteVisitAction(leadId, siteVisitDate, siteVisitNotes);
+      const result = await scheduleSiteVisitAction(leadId, siteVisitDate, siteVisitNotes, siteVisitLead.collectionType);
       if (result.success) {
         showMessage("Site visit scheduled successfully.");
         setSiteVisitLead(null);

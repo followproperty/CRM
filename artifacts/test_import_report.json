@@ -1,0 +1,416 @@
+{
+  "report": {
+    "timestamp": "2026-06-12T05:25:00.647Z",
+    "totalRowsRead": 2231,
+    "rowsImported": 15,
+    "rowsSkipped": 2,
+    "duplicatePhonesFound": {
+      "count": 1,
+      "phones": [
+        "9818294422"
+      ]
+    },
+    "missingPhonesFound": {
+      "count": 1,
+      "leads": [
+        {
+          "rowIndex": 12,
+          "name": "RAJESH KUMAR JINDAL",
+          "customerCode": "AUG0020003"
+        }
+      ]
+    },
+    "missingEmailsFound": {
+      "count": 0,
+      "leads": []
+    }
+  },
+  "samples": [
+    {
+      "name": "PRATIMA BAJAJ SAHNI",
+      "primaryPhone": "9810058244",
+      "customerCode": "AUG0010001",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "A-2/14,MODEL TOWN-I,     DELHI, 110009, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 0,
+          "sNo": "1",
+          "phoneSwapped": false
+        }
+      },
+      "email": "amitsahnifabs@gmail.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982b298badbbe487fd7b",
+      "phone": "9810058244",
+      "createdAt": "2026-06-12T05:24:59.971Z",
+      "updatedAt": "2026-06-12T05:24:59.971Z",
+      "__v": 0
+    },
+    {
+      "name": "RAGHUVAR BATRA",
+      "primaryPhone": "9810029245",
+      "customerCode": "AUG0010002",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "124 , SECTOR-9,     FARIDABAD, 121006, Haryana, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 1,
+          "sNo": "2",
+          "phoneSwapped": false
+        }
+      },
+      "email": "sanjivbatra@airtelmail.in",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd7c",
+      "phone": "9810029245",
+      "createdAt": "2026-06-12T05:25:00.017Z",
+      "updatedAt": "2026-06-12T05:25:00.017Z",
+      "__v": 0
+    },
+    {
+      "name": "AMAR VASUDEO SINGH",
+      "primaryPhone": "+6581806751",
+      "secondaryPhone": "64063930",
+      "customerCode": "AUG0010101",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "99, MEYER ROAD,,   #15-01, THE SOVEREIGN,   437920, Delhi,, Singapore.",
+      "country": "Singapore",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 2,
+          "sNo": "3",
+          "phoneSwapped": false
+        }
+      },
+      "email": "amar.singh@sc.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd7d",
+      "phone": "+6581806751",
+      "createdAt": "2026-06-12T05:25:00.076Z",
+      "updatedAt": "2026-06-12T05:25:00.076Z",
+      "__v": 0
+    },
+    {
+      "name": "VISHAL  AGARWAL",
+      "primaryPhone": "6582016384",
+      "secondaryPhone": "6568445413",
+      "customerCode": "AUG0010102",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "BLOCK-78,,     BAYSHORE ROAD # 22-21,, 469991,  Singapore.",
+      "country": "Singapore",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 3,
+          "sNo": "4",
+          "phoneSwapped": true
+        }
+      },
+      "email": "vish_agal@yahoo.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd7e",
+      "phone": "6582016384",
+      "createdAt": "2026-06-12T05:25:00.129Z",
+      "updatedAt": "2026-06-12T05:25:00.129Z",
+      "__v": 0
+    },
+    {
+      "name": "SURYA SANKAR  BAGCHI",
+      "primaryPhone": "6584988629",
+      "secondaryPhone": "6565967192",
+      "customerCode": "AUG0010201",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "STANDARD CHARTERED BANK, LEVEL 25,,   MARINE BAY FINANCIAL CENTRE,, TOWER 1,  018981, Delhi,,, Singa",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 4,
+          "sNo": "5",
+          "phoneSwapped": true
+        }
+      },
+      "email": "surya.bagchi@sc.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd7f",
+      "phone": "6584988629",
+      "createdAt": "2026-06-12T05:25:00.177Z",
+      "updatedAt": "2026-06-12T05:25:00.177Z",
+      "__v": 0
+    },
+    {
+      "name": "SANJEEV LAROIA",
+      "primaryPhone": "9818294422",
+      "secondaryPhone": "9818294422",
+      "customerCode": "AUG0010202",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "W - 8,   GREATER KAILASH - II,,     NEW DELHI, 110048, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 5,
+          "sNo": "6",
+          "phoneSwapped": false
+        }
+      },
+      "email": "laroia@travsyn.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd80",
+      "phone": "9818294422",
+      "createdAt": "2026-06-12T05:25:00.225Z",
+      "updatedAt": "2026-06-12T05:25:00.225Z",
+      "__v": 0
+    },
+    {
+      "name": "ANEESH DUDEJA",
+      "primaryPhone": "6591150133",
+      "secondaryPhone": "6564022131",
+      "customerCode": "AUG0010301",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "23 LEONIE HILL,,   #12-01, LEONIE GARDEN,,   239224, Delhi,, Singapore.",
+      "country": "Singapore",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 6,
+          "sNo": "7",
+          "phoneSwapped": true
+        }
+      },
+      "email": "aneesh.dudeja@sc.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd81",
+      "phone": "6591150133",
+      "createdAt": "2026-06-12T05:25:00.270Z",
+      "updatedAt": "2026-06-12T05:25:00.270Z",
+      "__v": 0
+    },
+    {
+      "name": "RADHA THAKUR",
+      "primaryPhone": "9810240374",
+      "secondaryPhone": "9810240374",
+      "customerCode": "AUG0010302",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "HOUSE NO-7, BLOCK-'G',,   SOUTH CITY-I,,  GURGAON, 999999, Haryana, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 7,
+          "sNo": "8",
+          "phoneSwapped": false
+        }
+      },
+      "email": "thakurbinod@yahoo.co.in",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd82",
+      "phone": "9810240374",
+      "createdAt": "2026-06-12T05:25:00.316Z",
+      "updatedAt": "2026-06-12T05:25:00.316Z",
+      "__v": 0
+    },
+    {
+      "name": "RASHMANI KUMAR MEHRISHI",
+      "primaryPhone": "9810605206",
+      "secondaryPhone": "01126024317",
+      "customerCode": "AUG0010401",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "C-41-A,,   GANGOTRI ENCLAVE,  ALAKNANDA,  NEW DELHI, 110019, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 8,
+          "sNo": "9",
+          "phoneSwapped": true
+        }
+      },
+      "email": "rkmehrishi@hotmail.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd83",
+      "phone": "9810605206",
+      "createdAt": "2026-06-12T05:25:00.360Z",
+      "updatedAt": "2026-06-12T05:25:00.360Z",
+      "__v": 0
+    },
+    {
+      "name": "UDAI SHER SINGH",
+      "primaryPhone": "9811044137",
+      "secondaryPhone": "01124615538",
+      "customerCode": "AUG0010402",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "213, JORBAGH,,      110003, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 9,
+          "sNo": "10",
+          "phoneSwapped": true
+        }
+      },
+      "email": "udaisher@vsnl.net",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd84",
+      "phone": "9811044137",
+      "createdAt": "2026-06-12T05:25:00.406Z",
+      "updatedAt": "2026-06-12T05:25:00.406Z",
+      "__v": 0
+    },
+    {
+      "name": "ANUJ GUPTA",
+      "primaryPhone": "9968634254",
+      "secondaryPhone": "01125720199",
+      "customerCode": "AUG0010501",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "V-4, PRASAD NAGAR,  DDA FLATS,,     NEW DELHI, 110005, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 10,
+          "sNo": "11",
+          "phoneSwapped": true
+        }
+      },
+      "email": "anujgupta17@hotmail.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd85",
+      "phone": "9968634254",
+      "createdAt": "2026-06-12T05:25:00.458Z",
+      "updatedAt": "2026-06-12T05:25:00.458Z",
+      "__v": 0
+    },
+    {
+      "name": "MANALI ROHATGI",
+      "primaryPhone": "9899690902",
+      "secondaryPhone": "22725077",
+      "customerCode": "AUG0020004",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "SITA RAM APARTMENTS,,   PLOT NO.102,, I.P.EXTENSION,PATPARGANJ,, NEW DELHI, 110092, Delhi, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 13,
+          "sNo": "14",
+          "phoneSwapped": false
+        }
+      },
+      "email": "gopesh700@gmail.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd86",
+      "phone": "9899690902",
+      "createdAt": "2026-06-12T05:25:00.500Z",
+      "updatedAt": "2026-06-12T05:25:00.500Z",
+      "__v": 0
+    },
+    {
+      "name": "SURINDER SINGH SIBIA",
+      "primaryPhone": "9814110063",
+      "customerCode": "AUG0020103",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "SIBIA HOUSE,, NA,  OPP. AMAR HSP.,, LEELA BHAVAN RD.,, PATIALA, 999999, Punjab, India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 14,
+          "sNo": "15",
+          "phoneSwapped": false
+        }
+      },
+      "email": "ssibia@yahoo.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd87",
+      "phone": "9814110063",
+      "createdAt": "2026-06-12T05:25:00.539Z",
+      "updatedAt": "2026-06-12T05:25:00.539Z",
+      "__v": 0
+    },
+    {
+      "name": "DIWAKAR NIGAM",
+      "primaryPhone": "9810042959",
+      "secondaryPhone": "1126512501",
+      "customerCode": "AUG0020104",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "M/S. NEWGEN SOFTWARE, NA,  TECHNOLOGIES LTD. A-6 SATSANG VIHAR MARG QUATAB INSTITUTIONAL AREA,, NEW",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 15,
+          "sNo": "16",
+          "phoneSwapped": true
+        }
+      },
+      "email": "nigam@newgensoft.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd88",
+      "phone": "9810042959",
+      "createdAt": "2026-06-12T05:25:00.575Z",
+      "updatedAt": "2026-06-12T05:25:00.575Z",
+      "__v": 0
+    },
+    {
+      "name": "KARAMCHAND REALTECH PVT. LTD.",
+      "primaryPhone": "9810931212",
+      "secondaryPhone": "01126836669",
+      "customerCode": "AUG0020203",
+      "projectName": "AUGUSTA TOWN HOMES",
+      "address": "72, OKHLA ESTATE PH-III, NA,    NEW DELHI, 110020,  India.",
+      "country": "India",
+      "sourceDetails": {
+        "rawRowData": {
+          "excelRowIndex": 16,
+          "sNo": "17",
+          "phoneSwapped": true
+        }
+      },
+      "email": "yudhvir.singh@karamchand.com",
+      "source": "CUSTOMER_DATABASE",
+      "status": "NEW",
+      "dnd": false,
+      "handedOffToAdmin": false,
+      "_id": "6a2b982c298badbbe487fd89",
+      "phone": "9810931212",
+      "createdAt": "2026-06-12T05:25:00.611Z",
+      "updatedAt": "2026-06-12T05:25:00.611Z",
+      "__v": 0
+    }
+  ]
+}

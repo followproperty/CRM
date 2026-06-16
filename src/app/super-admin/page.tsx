@@ -1,7 +1,7 @@
 import React from "react";
 import dbConnect from "@/lib/db";
 import User from "@/models/user.model";
-import Lead from "@/models/lead.model";
+import Lead, { getLeadModel } from "@/models/lead.model";
 import Activity from "@/models/activity.model";
 import { LeadStatus } from "@/types/lead";
 import mongoose from "mongoose";
@@ -16,11 +16,28 @@ export const revalidate = 0;
 export default async function SuperAdminDashboard() {
   await dbConnect();
 
-  // Real CRM Database Queries for Operational Metrics
-  const interestedLeadsCount = await Lead.countDocuments({ status: LeadStatus.INTERESTED });
-  const pendingFollowupsCount = await Lead.countDocuments({ status: LeadStatus.FOLLOW_UP });
-  const whatsappRequestsCount = await Lead.countDocuments({ handedOffToAdmin: true });
-  const siteVisitsCount = await Lead.countDocuments({ status: LeadStatus.SITE_VISIT });
+  // Real CRM Database Queries for Operational Metrics (summed across both collections)
+  const [
+    interestedDirect, interestedUploaded,
+    followupDirect, followupUploaded,
+    whatsappDirect, whatsappUploaded,
+    visitDirect, visitUploaded
+  ] = await Promise.all([
+    getLeadModel("leads").countDocuments({ status: LeadStatus.INTERESTED }),
+    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.INTERESTED }),
+    getLeadModel("leads").countDocuments({ status: LeadStatus.FOLLOW_UP }),
+    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.FOLLOW_UP }),
+    getLeadModel("leads").countDocuments({ handedOffToAdmin: true }),
+    getLeadModel("uploaded_leads").countDocuments({ handedOffToAdmin: true }),
+    getLeadModel("leads").countDocuments({ status: LeadStatus.SITE_VISIT }),
+    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.SITE_VISIT })
+  ]);
+
+  const interestedLeadsCount = interestedDirect + interestedUploaded;
+  const pendingFollowupsCount = followupDirect + followupUploaded;
+  const whatsappRequestsCount = whatsappDirect + whatsappUploaded;
+  const siteVisitsCount = visitDirect + visitUploaded;
+
 
   interface PopulatedUser {
     _id: string | mongoose.Types.ObjectId;

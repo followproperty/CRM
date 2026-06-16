@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import { Lead, UploadedLead } from "@/models/lead.model";
 import { ILead } from "@/types/lead";
 import LeadsFilters from "./LeadsFilters";
 import CallerLeadsTable from "./CallerLeadsTable";
@@ -48,11 +48,73 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
       query.status = statusFilter;
     }
 
-    const leadDocs = await Lead.find(query)
-      .sort({ updatedAt: -1 })
-      .lean();
+    // Query both collections concurrently
+    const [leadsRaw, uploadedLeadsRaw] = await Promise.all([
+      Lead.find(query).lean(),
+      UploadedLead.find(query).lean()
+    ]);
 
-    leads = leadDocs as unknown as ILead[];
+    // Tag and merge
+    const mergedLeads = [
+      ...(leadsRaw as any[]).map(l => ({ ...l, collectionType: "leads" })),
+      ...(uploadedLeadsRaw as any[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
+    ];
+
+    // Sort by updatedAt descending
+    mergedLeads.sort((a, b) => {
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // Serialize database models
+    leads = mergedLeads.map((lead: any) => ({
+      _id: lead._id ? lead._id.toString() : "",
+      name: lead.name,
+      phone: lead.phone,
+      primaryPhone: lead.primaryPhone,
+      secondaryPhone: lead.secondaryPhone,
+      projectName: lead.projectName,
+      address: lead.address,
+      country: lead.country,
+      email: lead.email,
+      source: lead.source,
+      sourceType: lead.sourceType,
+      sourceName: lead.sourceName,
+      projectId: lead.projectId ? lead.projectId.toString() : undefined,
+      assignedTo: lead.assignedTo ? lead.assignedTo.toString() : undefined,
+      assignedAt: lead.assignedAt ? new Date(lead.assignedAt) : undefined,
+      assignedBy: lead.assignedBy ? lead.assignedBy.toString() : undefined,
+      status: lead.status,
+      followUp: lead.followUp
+        ? {
+            date: lead.followUp.date ? new Date(lead.followUp.date) : undefined,
+            status: lead.followUp.status,
+            notes: lead.followUp.notes,
+          }
+        : undefined,
+      siteVisit: lead.siteVisit
+        ? {
+            date: lead.siteVisit.date ? new Date(lead.siteVisit.date) : undefined,
+            status: lead.siteVisit.status,
+            notes: lead.siteVisit.notes,
+          }
+        : undefined,
+      dnd: lead.dnd,
+      nextFollowUp: lead.nextFollowUp ? new Date(lead.nextFollowUp) : undefined,
+      city: lead.city,
+      state: lead.state,
+      siteVisitDate: lead.siteVisitDate ? new Date(lead.siteVisitDate) : undefined,
+      siteVisitStatus: lead.siteVisitStatus,
+      siteVisitNotes: lead.siteVisitNotes,
+      handedOffToAdmin: lead.handedOffToAdmin,
+      handedOffAt: lead.handedOffAt ? new Date(lead.handedOffAt) : undefined,
+      handedOffBy: lead.handedOffBy ? lead.handedOffBy.toString() : undefined,
+      updatedBy: lead.updatedBy ? lead.updatedBy.toString() : undefined,
+      createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
+      updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
+      collectionType: lead.collectionType,
+    }));
   } catch (err) {
     console.error("Failed to fetch assigned leads for caller:", err);
     error = "Unable to load leads from the database. Please try again later.";

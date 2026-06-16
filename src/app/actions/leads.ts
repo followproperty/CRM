@@ -2,7 +2,7 @@
 
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import Lead, { getLeadModel } from "@/models/lead.model";
 import Activity from "@/models/activity.model";
 import User from "@/models/user.model";
 import Note from "@/models/note.model";
@@ -24,7 +24,7 @@ export interface AssignLeadResult {
   error?: string;
 }
 
-export async function assignLeadAction(leadId: string, assigneeId: string | null): Promise<AssignLeadResult> {
+export async function assignLeadAction(leadId: string, assigneeId: string | null, collectionType?: string): Promise<AssignLeadResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
     return { success: false, error: "Unauthorized. Admin or Super Admin access required." };
@@ -33,8 +33,9 @@ export async function assignLeadAction(leadId: string, assigneeId: string | null
   try {
     await dbConnect();
 
+    const Model = getLeadModel(collectionType);
     // Verify lead exists
-    const lead = await Lead.findById(leadId);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -107,7 +108,8 @@ export async function updateLeadStatusAction(
   leadId: string,
   status: LeadStatus,
   followUpDateStr?: string | null,
-  noteText?: string | null
+  noteText?: string | null,
+  collectionType?: string
 ): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
@@ -117,8 +119,9 @@ export async function updateLeadStatusAction(
   try {
     await dbConnect();
 
+    const Model = getLeadModel(collectionType);
     // Verify lead exists
-    const lead = await Lead.findById(leadId);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -215,7 +218,8 @@ export interface ScheduleSiteVisitResult {
 export async function scheduleSiteVisitAction(
   leadId: string,
   visitDateStr: string,
-  notes?: string
+  notes?: string,
+  collectionType?: string
 ): Promise<ScheduleSiteVisitResult> {
   const session = await getSession();
   if (!session) {
@@ -225,8 +229,9 @@ export async function scheduleSiteVisitAction(
   try {
     await dbConnect();
 
+    const Model = getLeadModel(collectionType);
     // Verify lead exists
-    const lead = await Lead.findById(leadId);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -290,7 +295,7 @@ export async function scheduleSiteVisitAction(
   }
 }
 
-export async function startNegotiationAction(leadId: string): Promise<UpdateLeadStatusResult> {
+export async function startNegotiationAction(leadId: string, collectionType?: string): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
     return { success: false, error: "Unauthorized." };
@@ -298,7 +303,8 @@ export async function startNegotiationAction(leadId: string): Promise<UpdateLead
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -329,7 +335,7 @@ export async function startNegotiationAction(leadId: string): Promise<UpdateLead
   }
 }
 
-export async function markCustomerWonAction(leadId: string): Promise<UpdateLeadStatusResult> {
+export async function markCustomerWonAction(leadId: string, collectionType?: string): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
     return { success: false, error: "Unauthorized." };
@@ -337,7 +343,8 @@ export async function markCustomerWonAction(leadId: string): Promise<UpdateLeadS
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -374,7 +381,8 @@ export async function markCustomerWonAction(leadId: string): Promise<UpdateLeadS
 
 export async function markCustomerLostAction(
   leadId: string,
-  reason: string
+  reason: string,
+  collectionType?: string
 ): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
@@ -387,7 +395,8 @@ export async function markCustomerLostAction(
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -423,7 +432,7 @@ export async function markCustomerLostAction(
   }
 }
 
-export async function requestWhatsAppFollowupAction(leadId: string): Promise<UpdateLeadStatusResult> {
+export async function requestWhatsAppFollowupAction(leadId: string, collectionType?: string): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
     return { success: false, error: "Unauthorized." };
@@ -431,7 +440,8 @@ export async function requestWhatsAppFollowupAction(leadId: string): Promise<Upd
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -470,7 +480,7 @@ export async function requestWhatsAppFollowupAction(leadId: string): Promise<Upd
   }
 }
 
-export async function markWhatsAppDetailsSentAction(leadId: string): Promise<UpdateLeadStatusResult> {
+export async function markWhatsAppDetailsSentAction(leadId: string, collectionType?: string): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.ADMIN && session.role !== UserRole.SUPER_ADMIN)) {
     return { success: false, error: "Unauthorized. Admin access required." };
@@ -478,7 +488,8 @@ export async function markWhatsAppDetailsSentAction(leadId: string): Promise<Upd
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -513,7 +524,7 @@ export async function markWhatsAppDetailsSentAction(leadId: string): Promise<Upd
   }
 }
 
-export async function startAdminFollowupAction(leadId: string): Promise<UpdateLeadStatusResult> {
+export async function startAdminFollowupAction(leadId: string, collectionType?: string): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.ADMIN && session.role !== UserRole.SUPER_ADMIN)) {
     return { success: false, error: "Unauthorized. Admin access required." };
@@ -521,7 +532,8 @@ export async function startAdminFollowupAction(leadId: string): Promise<UpdateLe
 
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId);
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -553,14 +565,15 @@ export async function startAdminFollowupAction(leadId: string): Promise<UpdateLe
   }
 }
 
-export async function getLeadByIdAction(leadId: string): Promise<{ success: boolean; lead?: ILead; error?: string }> {
+export async function getLeadByIdAction(leadId: string, collectionType?: string): Promise<{ success: boolean; lead?: ILead; error?: string }> {
   const session = await getSession();
   if (!session) {
     return { success: false, error: "Unauthorized" };
   }
   try {
     await dbConnect();
-    const lead = await Lead.findById(leadId).lean();
+    const Model = getLeadModel(collectionType);
+    const lead = await Model.findById(leadId).lean();
     if (!lead) {
       return { success: false, error: "Lead not found" };
     }
@@ -589,7 +602,7 @@ export interface BulkAssignResult {
   error?: string;
 }
 
-export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: string | null): Promise<BulkAssignResult> {
+export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: string | null, collectionType?: string): Promise<BulkAssignResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
     return { success: false, error: "Unauthorized. Admin or Super Admin access required." };
@@ -611,9 +624,10 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
       assigneeName = assignee.name;
     }
 
+    const Model = getLeadModel(collectionType);
     // Perform updates in bulk
     if (assigneeId) {
-      await Lead.updateMany(
+      await Model.updateMany(
         { _id: { $in: leadIds } },
         {
           assignedTo: assigneeId,
@@ -622,7 +636,7 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
         }
       );
     } else {
-      await Lead.updateMany(
+      await Model.updateMany(
         { _id: { $in: leadIds } },
         {
           $unset: { assignedTo: 1, assignedAt: 1, assignedBy: 1 }
@@ -665,7 +679,7 @@ export interface AutoDistributeResult {
   error?: string;
 }
 
-export async function autoDistributeLeadsAction(leadIds: string[], activeCap: number): Promise<AutoDistributeResult> {
+export async function autoDistributeLeadsAction(leadIds: string[], activeCap: number, collectionType?: string): Promise<AutoDistributeResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
     return { success: false, assignedCount: 0, unassignedCount: leadIds.length, error: "Unauthorized." };
@@ -678,8 +692,9 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
   try {
     await dbConnect();
 
+    const Model = getLeadModel(collectionType);
     // 1. Fetch unassigned leads in this batch
-    const unassignedLeads = await Lead.find({
+    const unassignedLeads = await Model.find({
       _id: { $in: leadIds },
       $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
     });
@@ -705,10 +720,17 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
     // 3. Compute current active lead counts for each caller
     const callers = await Promise.all(
       callersRaw.map(async (caller) => {
-        const activeCount = await Lead.countDocuments({
-          assignedTo: caller._id,
-          status: { $in: activeStatuses }
-        });
+        const [activeLeadsCount, activeUploadedLeadsCount] = await Promise.all([
+          getLeadModel("leads").countDocuments({
+            assignedTo: caller._id,
+            status: { $in: activeStatuses }
+          }),
+          getLeadModel("uploaded_leads").countDocuments({
+            assignedTo: caller._id,
+            status: { $in: activeStatuses }
+          })
+        ]);
+        const activeCount = activeLeadsCount + activeUploadedLeadsCount;
         return {
           id: caller._id.toString(),
           name: caller.name,

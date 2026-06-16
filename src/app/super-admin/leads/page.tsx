@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import { Lead, UploadedLead } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { ILead, LeadStatus } from "@/types/lead";
 import { UserRole } from "@/types/user";
@@ -13,6 +13,7 @@ interface PageProps {
     status?: string;
     assignment?: string;
     page?: string;
+    collection?: string;
   }>;
 }
 
@@ -53,6 +54,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
   const search = params.search || "";
   const statusFilter = params.status || "ALL";
   const assignmentFilter = params.assignment || "ALL";
+  const collectionFilter = params.collection || "ALL";
   const currentPage = Math.max(1, parseInt(params.page || "1") || 1);
   const LIMIT = 50;
 
@@ -60,7 +62,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
   let eligibleUsers: { _id: string; name: string; role: string; activeCount: number }[] = [];
   let totalCount = 0;
   let totalUnassignedCount = 0;
-  let oldestUnassignedIds: string[] = [];
+  let oldestUnassignedLeads: { _id: string; collectionType: string }[] = [];
   let error: string | null = null;
 
   try {
@@ -86,35 +88,11 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       query.assignedTo = { $ne: null, $exists: true };
     }
 
-    // Count matching documents for pagination
-    totalCount = await Lead.countDocuments(query);
-
-    // Get total unassigned leads (database-wide)
-    totalUnassignedCount = await Lead.countDocuments({
+    const unassignedFilter = {
       $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
-    });
+    };
 
-    // Get oldest unassigned lead IDs for Quick Allocation
-    const oldestUnassignedDocs = await Lead.find({
-      $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }]
-    })
-      .select("_id")
-      .sort({ createdAt: 1 })
-      .limit(200)
-      .lean();
-
-    oldestUnassignedIds = oldestUnassignedDocs.map((doc) => doc._id.toString());
-
-    // Fetch paginated leads
-    const leadDocs = await Lead.find(query)
-      .populate("assignedTo", "name")
-      .sort({ createdAt: -1 })
-      .skip((currentPage - 1) * LIMIT)
-      .limit(LIMIT)
-      .lean();
-
-    // Serialize database models to plain objects
-    leads = (leadDocs as unknown as DBPopulatedLead[]).map((lead) => ({
+    const mapLeadDoc = (lead: DBPopulatedLead) => ({
       _id: lead._id.toString(),
       name: lead.name,
       phone: lead.phone,
@@ -137,7 +115,107 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       state: lead.state,
       createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
       updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
-    }));
+    });
+
+    if (collectionFilter === "leads") {
+      totalCount = await Lead.countDocuments(query);
+      totalUnassignedCount = await Lead.countDocuments(unassignedFilter);
+
+      const oldestUnassignedDocs = await Lead.find(unassignedFilter)
+        .select("_id")
+        .sort({ createdAt: 1 })
+        .limit(200)
+        .lean();
+      oldestUnassignedLeads = oldestUnassignedDocs.map((doc) => ({
+        _id: doc._id.toString(),
+        collectionType: "leads"
+      }));
+
+      const leadDocs = await Lead.find(query)
+        .populate("assignedTo", "name")
+        .sort({ createdAt: -1 })
+        .skip((currentPage - 1) * LIMIT)
+        .limit(LIMIT)
+        .lean();
+
+      leads = (leadDocs as unknown as DBPopulatedLead[]).map((lead) => ({
+        ...mapLeadDoc(lead),
+        collectionType: "leads"
+      }));
+    } else if (collectionFilter === "uploaded_leads") {
+      totalCount = await UploadedLead.countDocuments(query);
+      totalUnassignedCount = await UploadedLead.countDocuments(unassignedFilter);
+
+      const oldestUnassignedDocs = await UploadedLead.find(unassignedFilter)
+        .select("_id")
+        .sort({ createdAt: 1 })
+        .limit(200)
+        .lean();
+      oldestUnassignedLeads = oldestUnassignedDocs.map((doc) => ({
+        _id: doc._id.toString(),
+        collectionType: "uploaded_leads"
+      }));
+
+      const leadDocs = await UploadedLead.find(query)
+        .populate("assignedTo", "name")
+        .sort({ createdAt: -1 })
+        .skip((currentPage - 1) * LIMIT)
+        .limit(LIMIT)
+        .lean();
+
+      leads = (leadDocs as unknown as DBPopulatedLead[]).map((lead) => ({
+        ...mapLeadDoc(lead),
+        collectionType: "uploaded_leads"
+      }));
+    } else {
+      // ALL
+      const [leadsCount, uploadedCount, unassignedLeadsCount, unassignedUploadedCount] = await Promise.all([
+        Lead.countDocuments(query),
+        UploadedLead.countDocuments(query),
+        Lead.countDocuments(unassignedFilter),
+        UploadedLead.countDocuments(unassignedFilter)
+      ]);
+
+      totalCount = leadsCount + uploadedCount;
+      totalUnassignedCount = unassignedLeadsCount + unassignedUploadedCount;
+
+      const [oldestLeadsDocs, oldestUploadedDocs] = await Promise.all([
+        Lead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean(),
+        UploadedLead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean()
+      ]);
+
+      const mergedOldest = [
+        ...oldestLeadsDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "leads" })),
+        ...oldestUploadedDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "uploaded_leads" }))
+      ];
+      mergedOldest.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateA - dateB;
+      });
+      oldestUnassignedLeads = mergedOldest.slice(0, 200).map(item => ({ _id: item._id, collectionType: item.collectionType }));
+
+      // Fetch paginated leads from both up to page * limit to merge and sort correctly
+      const targetLimit = currentPage * LIMIT;
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean(),
+        UploadedLead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean()
+      ]);
+
+      const mergedLeads = [
+        ...(leadDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "leads", rawCreatedAt: l.createdAt })),
+        ...(uploadedDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "uploaded_leads", rawCreatedAt: l.createdAt }))
+      ];
+
+      mergedLeads.sort((a, b) => {
+        const dateA = a.rawCreatedAt ? new Date(a.rawCreatedAt).getTime() : 0;
+        const dateB = b.rawCreatedAt ? new Date(b.rawCreatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      const offset = (currentPage - 1) * LIMIT;
+      leads = mergedLeads.slice(offset, offset + LIMIT);
+    }
 
     const terminalStatuses = [
       LeadStatus.CUSTOMER,
@@ -160,10 +238,17 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
 
     eligibleUsers = await Promise.all(
       userDocs.map(async (u) => {
-        const activeCount = await Lead.countDocuments({
-          assignedTo: u._id,
-          status: { $in: activeStatuses }
-        });
+        const [activeLeadsCount, activeUploadedLeadsCount] = await Promise.all([
+          Lead.countDocuments({
+            assignedTo: u._id,
+            status: { $in: activeStatuses }
+          }),
+          UploadedLead.countDocuments({
+            assignedTo: u._id,
+            status: { $in: activeStatuses }
+          })
+        ]);
+        const activeCount = activeLeadsCount + activeUploadedLeadsCount;
         return {
           _id: u._id.toString(),
           name: u.name,
@@ -209,7 +294,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
           currentPage={currentPage}
           totalPages={totalPages}
           totalUnassignedCount={totalUnassignedCount}
-          oldestUnassignedIds={oldestUnassignedIds}
+          oldestUnassignedLeads={oldestUnassignedLeads}
         />
       )}
     </div>

@@ -114,6 +114,7 @@ export interface ILead {
   updatedBy?: string | Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
+  collectionType?: string;
 }
 
 /**

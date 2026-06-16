@@ -15,13 +15,15 @@ interface AssigneeSelectProps {
   currentAssigneeId?: string;
   eligibleUsers: EligibleUser[];
   activeCap?: number;
+  collectionType?: string;
 }
 
 export default function AssigneeSelect({ 
   leadId, 
   currentAssigneeId = "", 
   eligibleUsers,
-  activeCap = 80
+  activeCap = 80,
+  collectionType
 }: AssigneeSelectProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -30,7 +32,7 @@ export default function AssigneeSelect({
     const targetAssigneeId = value === "" ? null : value;
 
     startTransition(async () => {
-      const result = await assignLeadAction(leadId, targetAssigneeId);
+      const result = await assignLeadAction(leadId, targetAssigneeId, collectionType);
       if (!result.success && result.error) {
         alert(result.error);
       }

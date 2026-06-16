@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import { Lead, UploadedLead } from "@/models/lead.model";
 import Project from "@/models/project.model"; // Ensure model registers
 import User from "@/models/user.model";       // Ensure model registers
 import { UserRole } from "@/types/user";
@@ -32,6 +32,7 @@ interface DBPopulatedWhatsAppLead {
   email?: string;
   city?: string;
   state?: string;
+  collectionType?: string;
 }
 
 export default async function AdminWhatsAppFollowupsPage() {
@@ -44,14 +45,30 @@ export default async function AdminWhatsAppFollowupsPage() {
   try {
     await dbConnect();
 
-    // Query leads handed off to admin, sorted by handoff date descending
-    const docs = await Lead.find({ handedOffToAdmin: true })
-      .populate("assignedTo", "name email")
-      .populate("projectId", "name")
-      .sort({ handedOffAt: -1 })
-      .lean();
+    // Query leads handed off to admin, sorted by handoff date descending from both collections
+    const [leadDocs, uploadedDocs] = await Promise.all([
+      Lead.find({ handedOffToAdmin: true })
+        .populate("assignedTo", "name email")
+        .populate("projectId", "name")
+        .lean(),
+      UploadedLead.find({ handedOffToAdmin: true })
+        .populate("assignedTo", "name email")
+        .populate("projectId", "name")
+        .lean()
+    ]);
 
-    leads = (docs as unknown as DBPopulatedWhatsAppLead[]).map((lead) => ({
+    const merged = [
+      ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+      ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+    ];
+
+    merged.sort((a, b) => {
+      const dateA = a.handedOffAt ? new Date(a.handedOffAt).getTime() : 0;
+      const dateB = b.handedOffAt ? new Date(b.handedOffAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    leads = (merged as unknown as DBPopulatedWhatsAppLead[]).map((lead) => ({
       _id: lead._id.toString(),
       name: lead.name,
       phone: lead.phone,
@@ -72,6 +89,7 @@ export default async function AdminWhatsAppFollowupsPage() {
       email: lead.email,
       city: lead.city,
       state: lead.state,
+      collectionType: lead.collectionType,
     }));
   } catch (error) {
     console.error("Failed to fetch WhatsApp handoffs for admin:", error);

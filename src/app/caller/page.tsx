@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import Lead, { getLeadModel } from "@/models/lead.model";
 import { ILead } from "@/types/lead";
 import CallerPriorityQueue from "./CallerPriorityQueue";
 
@@ -16,16 +16,35 @@ export default async function CallerDashboard() {
 
   await dbConnect();
 
-  // 1. Fetch leads assigned to this caller
-  const callerLeads = (await Lead.find({ assignedTo: session.userId })
-    .sort({ updatedAt: -1 })
-    .lean()) as unknown as ILead[];
+  // 1. Fetch leads assigned to this caller from both collections concurrently
+  const [directLeadsRaw, uploadedLeadsRaw] = await Promise.all([
+    getLeadModel("leads").find({ assignedTo: session.userId }).lean(),
+    getLeadModel("uploaded_leads").find({ assignedTo: session.userId }).lean()
+  ]);
+
+  // Merge and tag each lead with its collectionType
+  const callerLeads = [
+    ...directLeadsRaw.map((l: any) => ({ ...l, collectionType: "leads" })),
+    ...uploadedLeadsRaw.map((l: any) => ({ ...l, collectionType: "uploaded_leads" }))
+  ];
+
+  // Sort by updatedAt descending
+  callerLeads.sort((a, b) => {
+    const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return dateB - dateA;
+  });
 
   // 2. Serialize database models to plain objects to avoid NextJS SSR warnings
-  const serializedLeads: ILead[] = callerLeads.map((lead) => ({
+  const serializedLeads: ILead[] = callerLeads.map((lead: any) => ({
     _id: lead._id ? lead._id.toString() : "",
     name: lead.name,
     phone: lead.phone,
+    primaryPhone: lead.primaryPhone,
+    secondaryPhone: lead.secondaryPhone,
+    projectName: lead.projectName,
+    address: lead.address,
+    country: lead.country,
     email: lead.email,
     source: lead.source,
     sourceType: lead.sourceType,
@@ -62,7 +81,9 @@ export default async function CallerDashboard() {
     updatedBy: lead.updatedBy ? lead.updatedBy.toString() : undefined,
     createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
     updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
+    collectionType: lead.collectionType,
   }));
+
 
   return (
     <div className="space-y-6">

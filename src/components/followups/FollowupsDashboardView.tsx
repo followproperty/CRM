@@ -19,6 +19,7 @@ interface PopulatedLead {
   email?: string;
   city?: string;
   state?: string;
+  collectionType?: string;
 }
 
 interface FollowupsDashboardViewProps {

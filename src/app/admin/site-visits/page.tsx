@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead from "@/models/lead.model";
+import { Lead, UploadedLead } from "@/models/lead.model";
 import { UserRole } from "@/types/user";
 import { LeadStatus, SiteVisitStatus } from "@/types/lead";
 import SiteVisitsDashboardView from "@/components/site-visits/SiteVisitsDashboardView";
@@ -29,6 +29,7 @@ interface DBSiteVisitLead {
     email: string;
   } | null;
   source: string;
+  collectionType?: string;
 }
 
 export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
@@ -65,20 +66,46 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
     // Queries
     // 1. Upcoming Visits
     if (visitStatusFilter === "ALL" || visitStatusFilter === SiteVisitStatus.SCHEDULED) {
-      const docs = await Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
-        .populate("assignedTo", "name email")
-        .sort({ siteVisitDate: 1 })
-        .lean();
-      upcomingVisits = docs as unknown as DBSiteVisitLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
+          .populate("assignedTo", "name email")
+          .lean(),
+        UploadedLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
+          .populate("assignedTo", "name email")
+          .lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
+        const dateB = b.siteVisitDate ? new Date(b.siteVisitDate).getTime() : 0;
+        return dateA - dateB; // Chronological order for upcoming
+      });
+      upcomingVisits = merged as unknown as DBSiteVisitLead[];
     }
 
     // 2. Completed Visits
     if (visitStatusFilter === "ALL" || visitStatusFilter === SiteVisitStatus.COMPLETED) {
-      const docs = await Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
-        .populate("assignedTo", "name email")
-        .sort({ siteVisitDate: -1 })
-        .lean();
-      completedVisits = docs as unknown as DBSiteVisitLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
+          .populate("assignedTo", "name email")
+          .lean(),
+        UploadedLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
+          .populate("assignedTo", "name email")
+          .lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
+        const dateB = b.siteVisitDate ? new Date(b.siteVisitDate).getTime() : 0;
+        return dateB - dateA; // Reverse chronological for completed
+      });
+      completedVisits = merged as unknown as DBSiteVisitLead[];
     }
 
     // 3. Cancelled & No-show Visits
@@ -91,11 +118,24 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
         visitStatusFilter === "ALL"
           ? { $in: [SiteVisitStatus.CANCELLED, SiteVisitStatus.NO_SHOW] }
           : visitStatusFilter;
-      const docs = await Lead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
-        .populate("assignedTo", "name email")
-        .sort({ siteVisitDate: -1 })
-        .lean();
-      cancelledVisits = docs as unknown as DBSiteVisitLead[];
+      const [leadDocs, uploadedDocs] = await Promise.all([
+        Lead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
+          .populate("assignedTo", "name email")
+          .lean(),
+        UploadedLead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
+          .populate("assignedTo", "name email")
+          .lean()
+      ]);
+      const merged = [
+        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ];
+      merged.sort((a, b) => {
+        const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
+        const dateB = b.siteVisitDate ? new Date(b.siteVisitDate).getTime() : 0;
+        return dateB - dateA; // Reverse chronological
+      });
+      cancelledVisits = merged as unknown as DBSiteVisitLead[];
     }
   } catch (err) {
     console.error("Failed to fetch site visits in admin dashboard:", err);
@@ -117,6 +157,7 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
         }
       : null,
     source: l.source,
+    collectionType: l.collectionType,
   });
 
   return (

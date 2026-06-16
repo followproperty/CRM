@@ -13,6 +13,7 @@ export default function LeadsFilters() {
   const currentSearch = searchParams.get("search") || "";
   const currentStatus = searchParams.get("status") || "ALL";
   const currentAssignment = searchParams.get("assignment") || "ALL";
+  const currentCollection = searchParams.get("collection") || "ALL";
 
   function handleFilterChange(name: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -68,6 +69,23 @@ export default function LeadsFilters() {
                 {LEAD_STATUS_LABELS[status] || status.replace("_", " ")}
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Collection Filter */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label htmlFor="collection-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
+            Collection:
+          </label>
+          <select
+            id="collection-select"
+            value={currentCollection}
+            onChange={(e) => handleFilterChange("collection", e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-550/50 focus:bg-white rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none transition-all cursor-pointer min-w-[145px]"
+          >
+            <option value="ALL">All Collections</option>
+            <option value="leads">Leads Only</option>
+            <option value="uploaded_leads">Uploaded Only</option>
           </select>
         </div>
 

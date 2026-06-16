@@ -255,11 +255,25 @@ LeadSchema.index({ "followUp.date": 1 });
 LeadSchema.index({ source: 1 });
 
 /**
- * Lead Model
- * Includes Next.js HMR check to reuse the model if already defined in the mongoose model registry.
+ * Lead Models
+ * Includes Next.js HMR check to reuse the models if already defined in the mongoose model registry.
  */
 const Lead: Model<ILeadDocument> =
-  mongoose.models.Lead || mongoose.model<ILeadDocument>("Lead", LeadSchema);
+  mongoose.models.Lead || mongoose.model<ILeadDocument>("Lead", LeadSchema, "leads");
+
+const UploadedLead: Model<ILeadDocument> =
+  mongoose.models.UploadedLead || mongoose.model<ILeadDocument>("UploadedLead", LeadSchema, "uploaded_leads");
+
+/**
+ * Resolves the appropriate Lead model based on collectionType.
+ */
+function getLeadModel(collectionType?: string): Model<ILeadDocument> {
+  if (collectionType === "uploaded_leads") {
+    return UploadedLead;
+  }
+  return Lead;
+}
 
 export default Lead;
-export { Lead };
+export { Lead, UploadedLead, getLeadModel };
+
