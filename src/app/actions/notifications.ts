@@ -3,7 +3,7 @@
 import dbConnect from "@/lib/db";
 import Notification from "@/models/notification.model";
 import User from "@/models/user.model";
-import Lead, { getLeadModel } from "@/models/lead.model";
+import { getLeadModel } from "@/models/lead.model";
 import { getSession } from "@/lib/session";
 import { UserRole } from "@/types/user";
 import { LeadStatus, ILead } from "@/types/lead";

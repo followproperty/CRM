@@ -2,8 +2,8 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import Lead, { getLeadModel } from "@/models/lead.model";
-import { ILead } from "@/types/lead";
+import { getLeadModel } from "@/models/lead.model";
+import { ILead, LeadStatus, FollowUpStatus, SiteVisitStatus } from "@/types/lead";
 import CallerPriorityQueue from "./CallerPriorityQueue";
 
 export const revalidate = 0;
@@ -22,10 +22,54 @@ export default async function CallerDashboard() {
     getLeadModel("uploaded_leads").find({ assignedTo: session.userId }).lean()
   ]);
 
+  interface DBLeadType {
+    _id: { toString(): string };
+    name: string;
+    phone: string;
+    primaryPhone?: string;
+    secondaryPhone?: string;
+    projectName?: string;
+    address?: string;
+    country?: string;
+    email?: string;
+    source: string;
+    sourceType?: string;
+    sourceName?: string;
+    projectId?: { toString(): string };
+    assignedTo?: { toString(): string };
+    assignedAt?: Date | string;
+    assignedBy?: { toString(): string };
+    status: LeadStatus;
+    followUp?: {
+      date?: Date | string;
+      status: FollowUpStatus;
+      notes?: string;
+    };
+    siteVisit?: {
+      date?: Date | string;
+      status: SiteVisitStatus;
+      notes?: string;
+    };
+    dnd?: boolean;
+    nextFollowUp?: Date | string;
+    city?: string;
+    state?: string;
+    siteVisitDate?: Date | string;
+    siteVisitStatus?: SiteVisitStatus;
+    siteVisitNotes?: string;
+    handedOffToAdmin?: boolean;
+    handedOffAt?: Date | string;
+    handedOffBy?: { toString(): string };
+    updatedBy?: { toString(): string };
+    createdAt?: Date | string;
+    collectionType?: string;
+    updatedAt?: Date;
+  }
+
   // Merge and tag each lead with its collectionType
   const callerLeads = [
-    ...directLeadsRaw.map((l: any) => ({ ...l, collectionType: "leads" })),
-    ...uploadedLeadsRaw.map((l: any) => ({ ...l, collectionType: "uploaded_leads" }))
+    ...(directLeadsRaw as unknown as DBLeadType[]).map((l) => ({ ...l, collectionType: "leads" })),
+    ...(uploadedLeadsRaw as unknown as DBLeadType[]).map((l) => ({ ...l, collectionType: "uploaded_leads" }))
   ];
 
   // Sort by updatedAt descending
@@ -36,7 +80,7 @@ export default async function CallerDashboard() {
   });
 
   // 2. Serialize database models to plain objects to avoid NextJS SSR warnings
-  const serializedLeads: ILead[] = callerLeads.map((lead: any) => ({
+  const serializedLeads: ILead[] = (callerLeads as unknown as DBLeadType[]).map((lead) => ({
     _id: lead._id ? lead._id.toString() : "",
     name: lead.name,
     phone: lead.phone,

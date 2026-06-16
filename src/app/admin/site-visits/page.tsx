@@ -75,8 +75,8 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
           .lean()
       ]);
       const merged = [
-        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
@@ -97,8 +97,8 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
           .lean()
       ]);
       const merged = [
-        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
@@ -127,8 +127,8 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
           .lean()
       ]);
       const merged = [
-        ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;

@@ -1,7 +1,7 @@
 import React from "react";
 import dbConnect from "@/lib/db";
 import User from "@/models/user.model";
-import Lead, { getLeadModel } from "@/models/lead.model";
+import { getLeadModel } from "@/models/lead.model";
 import Activity from "@/models/activity.model";
 import { LeadStatus } from "@/types/lead";
 import mongoose from "mongoose";

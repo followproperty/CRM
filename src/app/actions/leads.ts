@@ -2,7 +2,7 @@
 
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import Lead, { getLeadModel } from "@/models/lead.model";
+import { getLeadModel } from "@/models/lead.model";
 import Activity from "@/models/activity.model";
 import User from "@/models/user.model";
 import Note from "@/models/note.model";

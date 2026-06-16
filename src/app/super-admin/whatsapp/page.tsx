@@ -58,8 +58,8 @@ export default async function SuperAdminWhatsAppFollowupsPage() {
     ]);
 
     const merged = [
-      ...(leadDocs as any[]).map(d => ({ ...d, collectionType: "leads" })),
-      ...(uploadedDocs as any[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ...(leadDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "leads" })),
+      ...(uploadedDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
     ];
 
     merged.sort((a, b) => {

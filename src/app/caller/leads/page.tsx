@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
 import { Lead, UploadedLead } from "@/models/lead.model";
-import { ILead } from "@/types/lead";
+import { ILead, LeadStatus, FollowUpStatus, SiteVisitStatus } from "@/types/lead";
 import LeadsFilters from "./LeadsFilters";
 import CallerLeadsTable from "./CallerLeadsTable";
 
@@ -54,10 +54,54 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
       UploadedLead.find(query).lean()
     ]);
 
+    interface DBLeadType {
+      _id: { toString(): string };
+      name: string;
+      phone: string;
+      primaryPhone?: string;
+      secondaryPhone?: string;
+      projectName?: string;
+      address?: string;
+      country?: string;
+      email?: string;
+      source: string;
+      sourceType?: string;
+      sourceName?: string;
+      projectId?: { toString(): string };
+      assignedTo?: { toString(): string };
+      assignedAt?: Date | string;
+      assignedBy?: { toString(): string };
+      status: LeadStatus;
+      followUp?: {
+        date?: Date | string;
+        status: FollowUpStatus;
+        notes?: string;
+      };
+      siteVisit?: {
+        date?: Date | string;
+        status: SiteVisitStatus;
+        notes?: string;
+      };
+      dnd?: boolean;
+      nextFollowUp?: Date | string;
+      city?: string;
+      state?: string;
+      siteVisitDate?: Date | string;
+      siteVisitStatus?: SiteVisitStatus;
+      siteVisitNotes?: string;
+      handedOffToAdmin?: boolean;
+      handedOffAt?: Date | string;
+      handedOffBy?: { toString(): string };
+      collectionType?: string;
+      updatedAt?: Date;
+      updatedBy?: { toString(): string };
+      createdAt?: Date | string;
+    }
+
     // Tag and merge
     const mergedLeads = [
-      ...(leadsRaw as any[]).map(l => ({ ...l, collectionType: "leads" })),
-      ...(uploadedLeadsRaw as any[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
+      ...(leadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "leads" })),
+      ...(uploadedLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
     ];
 
     // Sort by updatedAt descending
@@ -68,7 +112,7 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
     });
 
     // Serialize database models
-    leads = mergedLeads.map((lead: any) => ({
+    leads = (mergedLeads as unknown as DBLeadType[]).map((lead) => ({
       _id: lead._id ? lead._id.toString() : "",
       name: lead.name,
       phone: lead.phone,

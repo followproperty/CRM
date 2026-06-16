@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import Lead, { getLeadModel } from "@/models/lead.model";
+import { getLeadModel } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { UserRole, IUser } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
@@ -67,7 +67,7 @@ export default async function AdminDashboard() {
 
   // Merge sourceStats
   const mergedSourceCounts: Record<string, number> = {};
-  [...sourceStatsDirect, ...sourceStatsUploaded].forEach((stat: any) => {
+  [...sourceStatsDirect, ...sourceStatsUploaded].forEach((stat: SourceStat) => {
     const key = stat._id || "Unknown/Direct";
     mergedSourceCounts[key] = (mergedSourceCounts[key] || 0) + stat.count;
   });
