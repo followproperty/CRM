@@ -418,27 +418,49 @@ async function main() {
   console.log(`Parsing file: ${path.basename(filePath)}...`);
 
   // 2. Parse file
-  let rawRecords: Record<string, any>[] = [];
+  let rawRecords: Record<string, unknown>[] = [];
   if (importSource === "PDF") {
     rawRecords = await parsePdf(filePath);
   } else {
     rawRecords = parseSpreadsheet(filePath);
   }
-
   const totalRecords = rawRecords.length;
   console.log(`Parsed ${totalRecords} raw records.`);
 
+  interface NormalizedLeadPayload {
+    name: string;
+    phone: string;
+    primaryPhone: string;
+    secondaryPhone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    source: string;
+    status: string;
+    dnd: boolean;
+    handedOffToAdmin: boolean;
+    sourceDetails: {
+      about: string;
+      importedAt: Date;
+      importedFileName: string;
+      importSource: string;
+      rawData: Record<string, unknown>;
+      [key: string]: unknown;
+    };
+  }
+
   // 3. Normalization, Validation and Cleaning
-  const validLeads: any[] = [];
-  const invalidRecords: { record: any; reason: string }[] = [];
-  const duplicateRecords: { record: any }[] = [];
+  const validLeads: NormalizedLeadPayload[] = [];
+  const invalidRecords: { record: Record<string, unknown>; reason: string }[] = [];
+  const duplicateRecords: { record: Record<string, unknown> }[] = [];
   
   const seenPhones = new Set<string>();
 
   for (const raw of rawRecords) {
     // Determine mapped fields via FIELD_ALIASES
-    const mapped: Record<string, any> = {};
-    const extraDetails: Record<string, any> = {};
+    const mapped: Record<string, unknown> = {};
+    const extraDetails: Record<string, unknown> = {};
 
     Object.entries(raw).forEach(([key, val]) => {
       const field = getMatchedField(key);
