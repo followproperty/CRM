@@ -93,6 +93,7 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
       { title: "Follow-ups", href: "/super-admin/followups", icon: <Icons.Phone /> },
       { title: "Site Visits", href: "/super-admin/site-visits", icon: <Icons.Verify /> },
       { title: "WhatsApp Follow-ups", href: "/super-admin/whatsapp", icon: <Icons.Chat /> },
+      { title: "Caller Performance", href: "/super-admin/performance", icon: <Icons.Analytics /> },
       { title: "User Management", href: "/super-admin/users", icon: <Icons.Users /> },
     ],
     [UserRole.ADMIN]: [
@@ -101,10 +102,12 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
       { title: "Follow-ups", href: "/admin/followups", icon: <Icons.Phone /> },
       { title: "Site Visits", href: "/admin/site-visits", icon: <Icons.Verify /> },
       { title: "WhatsApp Follow-ups", href: "/admin/whatsapp", icon: <Icons.Chat /> },
+      { title: "Caller Performance", href: "/admin/performance", icon: <Icons.Analytics /> },
     ],
     [UserRole.CALLER]: [
       { title: "My Dashboard", href: "/caller", icon: <Icons.Dashboard /> },
       { title: "Assigned Leads", href: "/caller/leads", icon: <Icons.Leads /> },
+      { title: "My Performance", href: "/caller/performance", icon: <Icons.Analytics /> },
     ],
     [UserRole.DATA_ENTRY]: [
       { title: "Dashboard", href: "/data-entry", icon: <Icons.Dashboard /> },
