@@ -206,7 +206,16 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       </td>
                       {/* Contact */}
                       <td className="px-6 py-4 text-slate-655 font-mono">
-                        <a href={`tel:${contactNumber}`} className="hover:text-indigo-600 transition-colors font-medium">
+                        <a
+                          href={`tel:${contactNumber}`}
+                          onClick={() => {
+                            setTimeout(() => {
+                              setActiveOutcomeLead(lead);
+                              setOutcomeNote("");
+                            }, 100);
+                          }}
+                          className="hover:text-indigo-600 transition-colors font-medium"
+                        >
                           {contactNumber}
                         </a>
                       </td>
@@ -224,6 +233,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                           <div className="flex justify-end gap-2">
                             <a
                               href={`tel:${contactNumber}`}
+                              onClick={() => {
+                                setTimeout(() => {
+                                  setActiveOutcomeLead(lead);
+                                  setOutcomeNote("");
+                                }, 100);
+                              }}
                               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all active:scale-[0.98] inline-flex items-center gap-1 shadow-xs"
                             >
                               Call
@@ -282,6 +297,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                     </button>
                     <a
                       href={`tel:${contactNumber}`}
+                      onClick={() => {
+                        setTimeout(() => {
+                          setActiveOutcomeLead(lead);
+                          setOutcomeNote("");
+                        }, 100);
+                      }}
                       className="text-sm text-slate-500 font-mono font-medium mt-0.5 hover:text-indigo-650 inline-block"
                     >
                       {contactNumber}
@@ -307,6 +328,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {/* Prominent green Call button */}
                       <a
                         href={`tel:${contactNumber}`}
+                        onClick={() => {
+                          setTimeout(() => {
+                            setActiveOutcomeLead(lead);
+                            setOutcomeNote("");
+                          }, 100);
+                        }}
                         className="flex items-center justify-center gap-1.5 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.99] touch-manipulation"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

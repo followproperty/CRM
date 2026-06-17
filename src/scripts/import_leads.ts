@@ -243,6 +243,203 @@ function parseSpreadsheet(filePath: string): Record<string, unknown>[] {
   return allRecords;
 }
 
+// -----------------------------------------------------------------------------
+// Noida Extension Doctors PDF Parsing Helpers
+// -----------------------------------------------------------------------------
+function isMetadataOrHeaderLine(line: string): boolean {
+  const lower = line.toLowerCase().trim();
+  if (!lower) return true;
+  if (/^page \d+ of \d+/i.test(lower)) return true;
+  if (/^doctors at greater/i.test(lower)) return true;
+  if (/^prepared by/i.test(lower)) return true;
+  if (/^date of release/i.test(lower)) return true;
+  if (/^email:.*twitter:/i.test(lower)) return true;
+  if (/^s\.no\.\s+sevices/i.test(lower)) return true;
+  return false;
+}
+
+function extractPhones(text: string): { phones: string[]; cleanedText: string } {
+  const regexes = [
+    /0\d{1,4}-\d{3,4}\s*\d{3,4}/g,
+    /\b[6-9]\d{4}-\d{5}\b/g,
+    /\b[6-9]\d{9}\b/g,
+    /\b0\d{10}\b/g
+  ];
+
+  let cleaned = text;
+  const found: string[] = [];
+
+  for (const r of regexes) {
+    let match;
+    while ((match = r.exec(cleaned)) !== null) {
+      found.push(match[0]);
+      cleaned = cleaned.replace(match[0], " ");
+    }
+  }
+  return { phones: found, cleanedText: cleaned.replace(/\s+/g, " ").trim() };
+}
+
+function splitNameAndAddress(remainingText: string): { name: string; address: string } {
+  const words = remainingText.split(/\s+/);
+  if (words.length <= 1) {
+    return { name: remainingText, address: "" };
+  }
+
+  let splitIdx = -1;
+  const addressKeywords = new Set([
+    "cherry", "supertech", "crossing", "crossings", "mahagun", "la", "gaur", 
+    "sector", "sec", "mool", "apollo", "apolo", "city", "residentia", 
+    "moderne", "mascot", "republik", "galleria", "plaza", "haryana", "delhi", 
+    "noida", "ghaziabad", "ward", "hospital", "diagnostics", "tower", "towers", 
+    "flat", "apartment", "apartments", "dream", "exotica", "plaza"
+  ]);
+
+  const facilityKeywords = new Set(["labs", "lab", "clinic", "pathology", "path", "care"]);
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const clean = word.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!clean) continue;
+
+    if (clean === "dr") continue;
+    if (facilityKeywords.has(clean)) continue;
+
+    if (/\d/.test(clean)) {
+      splitIdx = i;
+      break;
+    }
+
+    if (addressKeywords.has(clean)) {
+      splitIdx = i;
+      break;
+    }
+  }
+
+  if (splitIdx === -1) {
+    if (words[0].toLowerCase().startsWith("dr") && words.length > 3) {
+      return {
+        name: words.slice(0, 3).join(" "),
+        address: words.slice(3).join(" ")
+      };
+    }
+    return { name: remainingText, address: "" };
+  }
+
+  if (splitIdx === 0) {
+    splitIdx = 1;
+  }
+
+  return {
+    name: words.slice(0, splitIdx).join(" "),
+    address: words.slice(splitIdx).join(" ")
+  };
+}
+
+function processNoidaRecord(lines: string[]): Record<string, unknown> {
+  const fullText = lines.join(" ").replace(/\s+/g, " ").trim();
+  const { phones, cleanedText } = extractPhones(fullText);
+  
+  const categoryRegex = /^\s*(\d+)\s+(Doctor\s*-\s*(?:Acupuncture|Ayurveda|Cardiac\s+Anaesthestist|Cardio|Dental|Diabetologist|ENT|Eyes|Gastro\s+&\s+Liver|Gynae|Homoeo|Intensivist|Microbiologist|Multi\s+Purpose|Nephrologist\s+\(Kidney\)|Nuero\s+Surgeon|Nuero|Ortho|Pedia|Physician|Physio|Psychiatrist|Skin\s+\(Dermatologist\)|Surgeon|Urologist|Vascular\s+Surgeon|Xray)|Doctor\b|Pathology\b)/i;
+  const match = cleanedText.match(categoryRegex);
+  
+  if (!match) {
+    const { name, address } = splitNameAndAddress(cleanedText);
+    return {
+      name,
+      phone: phones[0] || "",
+      secondaryPhone: phones[1] || "",
+      address,
+      about: ""
+    };
+  }
+
+  const category = match[2].trim();
+  const restText = cleanedText.substring(match[0].length).trim();
+  const { name, address } = splitNameAndAddress(restText);
+  
+  return {
+    name,
+    phone: phones[0] || "",
+    secondaryPhone: phones[1] || "",
+    address,
+    about: category
+  };
+}
+
+function processPanelRecord(lines: string[]): Record<string, unknown> {
+  const fullText = lines.join(" ").replace(/\s+/g, " ").trim();
+  const { phones, cleanedText } = extractPhones(fullText);
+
+  const serialMatch = cleanedText.match(/^\s*(\d+)\s+(Dr\b.*)/i);
+  if (!serialMatch) {
+    return {
+      name: cleanedText,
+      phone: phones[0] || "",
+      secondaryPhone: phones[1] || "",
+      address: "",
+      about: ""
+    };
+  }
+
+  const restText = serialMatch[2].trim();
+  const specRegex = /\s+(Cardiology|Dental|Dermatology|ENT|Gynaecology|General\s+Medicine|General\s+Surgery|Ophthalmology|Opthalmology|Orthopaedics|Paediatrics|Psychiatry|Radiology|Urology|Physiotherapy|Endocrinology|Genreal\s+Medicine|Nephrology|Obsterics\s+&\s+Gynaecology|Obstetrics\s+&\s+Gynaecology|Obstetrics|Obsterics|General|Plastic\s+Surgery|Oncology|Pathology|Radiodiagnosis|Diagnostics)\b/i;
+  
+  const specMatch = restText.match(specRegex);
+  if (specMatch) {
+    const specialty = specMatch[1];
+    const index = restText.indexOf(specMatch[0]);
+    const name = restText.substring(0, index).trim();
+    const address = restText.substring(index + specMatch[0].length).trim();
+    return {
+      name,
+      phone: phones[0] || "",
+      secondaryPhone: phones[1] || "",
+      address,
+      about: `Doctor - ${specialty}`
+    };
+  } else {
+    const words = restText.split(/\s+/);
+    const name = words.slice(0, 3).join(" ");
+    const address = words.slice(3).join(" ");
+    return {
+      name,
+      phone: phones[0] || "",
+      secondaryPhone: phones[1] || "",
+      address,
+      about: "Doctor"
+    };
+  }
+}
+
+function cleanNtpcNameAndDesignation(rawName: string, rawDesignation: string): { name: string; designation: string } {
+  const name = rawName.trim();
+  const designationKeywords = [
+    "CHIEF MEDICAL OFFICER",
+    "SPECIALIST",
+    "SR.SPECIALIST",
+    "SR. SPECIALIST",
+    "SR.MEDICAL OFFICER",
+    "GDMO",
+    "ACMO",
+    "MEDICAL OFFICER",
+    "PHYSICIAN"
+  ];
+
+  for (const kw of designationKeywords) {
+    const idx = name.toUpperCase().indexOf(kw);
+    if (idx !== -1) {
+      const cleanedName = name.substring(0, idx).trim();
+      const extractedDesignation = name.substring(idx).trim();
+      const finalDesignation = rawDesignation 
+        ? `${extractedDesignation} - ${rawDesignation}`
+        : extractedDesignation;
+      return { name: cleanedName, designation: finalDesignation };
+    }
+  }
+
+  return { name, designation: rawDesignation };
+}
+
 async function parsePdf(filePath: string): Promise<Record<string, unknown>[]> {
   const dataBuffer = fs.readFileSync(filePath);
   const parser = new PDFParse({ data: dataBuffer });
@@ -250,34 +447,163 @@ async function parsePdf(filePath: string): Promise<Record<string, unknown>[]> {
   await parser.destroy();
 
   const pages = textResult.pages;
-  const namePhonePages: typeof pages = [];
-  const emailAddrPages: typeof pages = [];
 
-  pages.forEach(page => {
-    const text = page.text.toLowerCase();
-    if (text.includes("msisdn") || (text.includes("name") && !text.includes("email"))) {
-      namePhonePages.push(page);
-    } else if (text.includes("email") || text.includes("address")) {
-      emailAddrPages.push(page);
-    } else {
-      // Line regex counts fallback
+  // Check if it's the NTPC Doctors PDF by looking for headers
+  const isNtpcDoctors = pages.some(p => p.text.includes("Project") && p.text.includes("Doctor Name") && p.text.includes("Mobile No."));
+
+  if (isNtpcDoctors) {
+    const records: Record<string, unknown>[] = [];
+    for (const page of pages.sort((a, b) => a.num - b.num)) {
       const lines = page.text.split("\n").map(l => l.trim()).filter(Boolean);
-      let phoneCount = 0;
-      let emailCount = 0;
-      lines.forEach(l => {
-        if (/[6-9]\d{9}$/.test(l)) phoneCount++;
-        if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(l)) emailCount++;
-      });
-      if (phoneCount > emailCount) {
+      for (const line of lines) {
+        if (line.toLowerCase().includes("project") && line.toLowerCase().includes("doctor name")) continue;
+        if (line.toLowerCase().includes("list of ntpc") || line.toLowerCase().includes("doctors")) continue;
+
+        const parts = line.split("\t").map(p => p.trim());
+        if (parts.length >= 4) {
+          // 1. Find name column
+          let nameIdx = -1;
+          for (let i = 0; i < parts.length; i++) {
+            if (/\bDr\b/i.test(parts[i])) {
+              nameIdx = i;
+              break;
+            }
+          }
+          if (nameIdx === -1) {
+            nameIdx = parts.length >= 6 ? 2 : 1;
+          }
+
+          const rawName = parts[nameIdx];
+          const beforeName = parts.slice(0, nameIdx).join(" ");
+          const project = beforeName.replace(/^\s*\d+\s+/, "").trim();
+
+          // 2. Extract phone, email and designation from parts after name
+          const afterName = parts.slice(nameIdx + 1);
+          let phone = "";
+          let email = "";
+          let rawDesignation = "";
+
+          if (afterName.length >= 2) {
+            const last = afterName[afterName.length - 1];
+            const secondLast = afterName[afterName.length - 2];
+            if (last.includes("@")) {
+              email = last;
+              phone = secondLast;
+              rawDesignation = afterName.slice(0, afterName.length - 2).join(" - ");
+            } else {
+              phone = last;
+              rawDesignation = afterName.slice(0, afterName.length - 1).join(" - ");
+            }
+          } else if (afterName.length === 1) {
+            phone = afterName[0];
+          }
+
+          // If phone is not a valid phone but email contains a 10-digit phone
+          if (email && (!phone || !/^\d+$/.test(phone.replace(/[-\s]/g, "")))) {
+            const phoneMatch = email.match(/\b([6-9]\d{9})\b/);
+            if (phoneMatch) {
+              phone = phoneMatch[1];
+              email = email.replace(phoneMatch[0], "").replace(/[\s/]+/g, "").trim();
+            }
+          }
+
+          // 3. Clean Name and Designation
+          const { name, designation } = cleanNtpcNameAndDesignation(rawName, rawDesignation);
+
+          records.push({
+            name,
+            phone,
+            email,
+            address: project ? `NTPC Project: ${project}` : undefined,
+            about: designation
+          });
+        }
+      }
+    }
+    return records;
+  }
+
+  // Check if it's the Panel Doctors PDF
+  const isPanelDoctors = pages.some(p => p.text.includes("Sl No. Doctor Name") && p.text.includes("Specilazation") && p.text.includes("Clinic Address"));
+
+  if (isPanelDoctors) {
+    const records: Record<string, unknown>[] = [];
+    let currentRecordLines: string[] = [];
+
+    for (const page of pages.sort((a, b) => a.num - b.num)) {
+      const lines = page.text.split("\n").map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.toLowerCase().includes("sl no. doctor name") && line.toLowerCase().includes("specilazation")) continue;
+
+        const match = line.match(/^\s*(\d+)\s+Dr\b/i);
+        if (match) {
+          if (currentRecordLines.length > 0) {
+            records.push(processPanelRecord(currentRecordLines));
+          }
+          currentRecordLines = [line];
+        } else {
+          if (currentRecordLines.length > 0) {
+            currentRecordLines.push(line);
+          }
+        }
+      }
+    }
+    if (currentRecordLines.length > 0) {
+      records.push(processPanelRecord(currentRecordLines));
+    }
+    return records;
+  }
+
+  // Check if it's the Noida Extension Doctors PDF by looking for the column header
+  const isNoidaDoctors = pages.some(p => p.text.includes("S.No. Sevices Name Address/Tower/Flat Contact No."));
+
+  if (isNoidaDoctors) {
+    const records: Record<string, unknown>[] = [];
+    let currentRecordLines: string[] = [];
+
+    for (const page of pages.sort((a, b) => a.num - b.num)) {
+      const lines = page.text.split("\n").map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (isMetadataOrHeaderLine(line)) {
+          continue;
+        }
+
+        const match = line.match(/^\s*(\d+)\s+(Doctor|Pathology)\b/i);
+        if (match) {
+          if (currentRecordLines.length > 0) {
+            records.push(processNoidaRecord(currentRecordLines));
+          }
+          currentRecordLines = [line];
+        } else {
+          if (currentRecordLines.length > 0) {
+            currentRecordLines.push(line);
+          }
+        }
+      }
+    }
+    if (currentRecordLines.length > 0) {
+      records.push(processNoidaRecord(currentRecordLines));
+    }
+    return records;
+  }
+
+  // Fallback to previous layouts
+  const isSplitColumnLayout = pages.some(p => p.text.toLowerCase().includes("name msisdn")) && 
+                              pages.some(p => p.text.toLowerCase().includes("email address1") || p.text.toLowerCase().includes("email address"));
+
+  if (isSplitColumnLayout) {
+    const namePhonePages: typeof pages = [];
+    const emailAddrPages: typeof pages = [];
+
+    pages.forEach(page => {
+      const text = page.text.toLowerCase();
+      if (text.includes("msisdn") || (text.includes("name") && !text.includes("email"))) {
         namePhonePages.push(page);
       } else {
         emailAddrPages.push(page);
       }
-    }
-  });
+    });
 
-  // Handle Case 1: Split-column page layouts
-  if (namePhonePages.length > 0 && emailAddrPages.length > 0) {
     namePhonePages.sort((a, b) => a.num - b.num);
     emailAddrPages.sort((a, b) => a.num - b.num);
 

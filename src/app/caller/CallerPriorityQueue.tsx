@@ -254,6 +254,12 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                         </button>
                         <a
                           href={`tel:${contactNumber}`}
+                          onClick={() => {
+                            setTimeout(() => {
+                              setActiveOutcomeLead(lead);
+                              setOutcomeNote("");
+                            }, 100);
+                          }}
                           className="text-sm text-slate-550 font-mono font-medium mt-0.5 hover:text-indigo-600 inline-block"
                         >
                           {contactNumber}
@@ -289,6 +295,12 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                           {/* Prominent green CALL button */}
                           <a
                             href={`tel:${contactNumber}`}
+                            onClick={() => {
+                              setTimeout(() => {
+                                setActiveOutcomeLead(lead);
+                                setOutcomeNote("");
+                              }, 100);
+                            }}
                             className="flex items-center justify-center gap-1.5 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.99] touch-manipulation"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -328,7 +340,16 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 <div key={reminder.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs hover:border-slate-350 transition-all flex flex-col gap-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-mono text-indigo-650 font-bold">{reminder.time}</span>
-                    <a href={`tel:${reminder.phone}`} className="p-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200">
+                    <a
+                      href={`tel:${reminder.phone}`}
+                      onClick={() => {
+                        setTimeout(() => {
+                          setActiveOutcomeLead(reminder.leadObject);
+                          setOutcomeNote("");
+                        }, 100);
+                      }}
+                      className="p-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200"
+                    >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
