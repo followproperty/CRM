@@ -58,12 +58,10 @@ export default function AssigneeSelect({
           */
           if (!isCaller) return null;
           const count = user.activeCount ?? 0;
-          const isFull = isCaller && count >= activeCap;
-          const isDisabled = isFull && user._id !== currentAssigneeId;
 
           return (
-            <option key={user._id} value={user._id} disabled={isDisabled}>
-              {user.name} ({count}/{user.totalCount ?? 0}{isFull ? " FULL" : ""})
+            <option key={user._id} value={user._id}>
+              {user.name} ({count}/{user.totalCount ?? 0})
             </option>
           );
         })}

@@ -372,10 +372,9 @@ export default function SuperAdminLeadsTable({
                   Comment/skip the 0/infinity (admin) option, keep only the three callers for now
                 */
                 if (!isCaller) return null;
-                const isFull = isCaller && user.activeCount >= activeCap;
                 return (
-                  <option key={user._id} value={user._id} disabled={isFull}>
-                    {user.name} ({user.activeCount}/{user.totalCount}{isFull ? " - FULL" : ""})
+                  <option key={user._id} value={user._id}>
+                    {user.name} ({user.activeCount}/{user.totalCount})
                   </option>
                 );
               })}
@@ -503,10 +502,9 @@ export default function SuperAdminLeadsTable({
                       Comment/skip the 0/infinity (admin) option, keep only the three callers for now
                     */
                     if (!isCaller) return null;
-                    const isFull = isCaller && user.activeCount >= activeCap;
                     return (
-                      <option key={user._id} value={user._id} disabled={isFull}>
-                        {user.name} ({user.activeCount}/{user.totalCount}{isFull ? " FULL" : ""})
+                      <option key={user._id} value={user._id}>
+                        {user.name} ({user.activeCount}/{user.totalCount})
                       </option>
                     );
                   })}
