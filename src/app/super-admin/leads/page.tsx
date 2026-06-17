@@ -59,7 +59,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
   const LIMIT = 50;
 
   let leads: PopulatedLead[] = [];
-  let eligibleUsers: { _id: string; name: string; role: string; activeCount: number }[] = [];
+  let eligibleUsers: { _id: string; name: string; role: string; activeCount: number; totalCount: number; calledCount: number }[] = [];
   let totalCount = 0;
   let totalUnassignedCount = 0;
   let oldestUnassignedLeads: { _id: string; collectionType: string }[] = [];
@@ -238,7 +238,11 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
 
     eligibleUsers = await Promise.all(
       userDocs.map(async (u) => {
-        const [activeLeadsCount, activeUploadedLeadsCount] = await Promise.all([
+        const [
+          activeLeadsCount, activeUploadedLeadsCount,
+          totalLeadsCount, totalUploadedLeadsCount,
+          calledLeadsCount, calledUploadedLeadsCount
+        ] = await Promise.all([
           Lead.countDocuments({
             assignedTo: u._id,
             status: { $in: activeStatuses }
@@ -246,14 +250,22 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
           UploadedLead.countDocuments({
             assignedTo: u._id,
             status: { $in: activeStatuses }
-          })
+          }),
+          Lead.countDocuments({ assignedTo: u._id }),
+          UploadedLead.countDocuments({ assignedTo: u._id }),
+          Lead.countDocuments({ assignedTo: u._id, status: { $ne: LeadStatus.NEW } }),
+          UploadedLead.countDocuments({ assignedTo: u._id, status: { $ne: LeadStatus.NEW } })
         ]);
         const activeCount = activeLeadsCount + activeUploadedLeadsCount;
+        const totalCount = totalLeadsCount + totalUploadedLeadsCount;
+        const calledCount = calledLeadsCount + calledUploadedLeadsCount;
         return {
           _id: u._id.toString(),
           name: u.name,
           role: u.role,
           activeCount,
+          totalCount,
+          calledCount,
         };
       })
     );

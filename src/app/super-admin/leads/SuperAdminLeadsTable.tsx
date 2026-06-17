@@ -19,6 +19,8 @@ interface EligibleUser {
   name: string;
   role: string;
   activeCount: number;
+  totalCount: number;
+  calledCount: number;
 }
 
 interface SuperAdminLeadsTableProps {
@@ -302,20 +304,34 @@ export default function SuperAdminLeadsTable({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {eligibleUsers.filter(u => u.role === "CALLER").map(user => {
             const isFull = user.activeCount >= activeCap;
-            const loadPercentage = Math.min(100, (user.activeCount / activeCap) * 100);
+            const callingProgressPct = user.totalCount > 0 ? Math.round((user.calledCount / user.totalCount) * 100) : 0;
             return (
-              <div key={user._id} className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 flex flex-col justify-between hover:shadow-sm transition-all duration-200">
-                <div className="flex justify-between items-start gap-1">
-                  <span className="font-semibold text-slate-700 text-xs truncate" title={user.name}>{user.name}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${isFull ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-                    {user.activeCount}/{activeCap}
-                  </span>
+              <div key={user._id} className="bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between hover:shadow-md hover:border-slate-350 transition-all duration-200">
+                <div className="space-y-2.5">
+                  <div className="flex justify-between items-center gap-1.5">
+                    <span className="font-bold text-slate-800 text-xs truncate" title={user.name}>{user.name}</span>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${isFull ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+                      {user.activeCount}/{activeCap} Active
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1.5 text-[11px] text-slate-500 font-medium">
+                    <div className="flex justify-between">
+                      <span>Assigned:</span>
+                      <span className="font-bold text-slate-705">{user.totalCount || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Called:</span>
+                      <span className="font-bold text-slate-705">{user.calledCount || 0} ({callingProgressPct}%)</span>
+                    </div>
+                  </div>
                 </div>
-                {/* Progress bar */}
-                <div className="w-full bg-slate-200 rounded-full h-1 mt-2.5 overflow-hidden">
+                
+                {/* Progress bar showing calling progress */}
+                <div className="w-full bg-slate-200 rounded-full h-1.5 mt-3 overflow-hidden">
                   <div 
-                    className={`h-1 rounded-full transition-all duration-300 ${isFull ? 'bg-rose-500' : loadPercentage > 75 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                    style={{ width: `${loadPercentage}%` }}
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                    style={{ width: `${callingProgressPct}%` }}
                   />
                 </div>
               </div>
