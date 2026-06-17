@@ -82,7 +82,7 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
         {/* Today's Assignment Progress */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Today's Calling Progress</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Today&apos;s Calling Progress</p>
             <p className="text-3xl font-extrabold text-slate-800 mt-1.5">
               {calledToday}<span className="text-slate-400 text-sm font-medium">/{assignedToday}</span>
             </p>
@@ -187,7 +187,7 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm md:col-span-7 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
-              <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">Today's Call History</h3>
+              <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">Today&apos;s Call History</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Your most recent logging activities today.</p>
             </div>
 

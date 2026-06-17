@@ -23,7 +23,6 @@ export default function AssigneeSelect({
   leadId, 
   currentAssigneeId = "", 
   eligibleUsers,
-  activeCap = 80,
   collectionType
 }: AssigneeSelectProps) {
   const [isPending, startTransition] = useTransition();

@@ -49,7 +49,7 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
               <tr className="bg-slate-50 border-b border-slate-205 text-slate-500 uppercase tracking-wider font-bold text-[10px]">
                 <th className="px-5 py-3.5">Caller Name</th>
                 <th className="px-5 py-3.5 text-center">Calls Made Today</th>
-                <th className="px-5 py-3.5 text-center">Today's Calling Progress</th>
+                <th className="px-5 py-3.5 text-center">Today&apos;s Calling Progress</th>
                 <th className="px-5 py-3.5 text-center">Active Leads / Total Assigned</th>
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
