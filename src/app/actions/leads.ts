@@ -11,6 +11,7 @@ import { ActivityAction } from "@/types/activity";
 import { UserRole } from "@/types/user";
 import { revalidatePath } from "next/cache";
 import { LeadStatus, FollowUpStatus, SiteVisitStatus, ILead } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 import {
   triggerInterestedLeadNotification,
   triggerAdminHandoffNotification,
@@ -158,11 +159,13 @@ export async function updateLeadStatusAction(
       lead.followUp = {
         date: parsedDate,
         status: FollowUpStatus.PENDING,
-        notes: noteText || `Scheduled callback for ${parsedDate.toLocaleString()}`,
+        notes: noteText || `Scheduled callback for ${formatToIST(parsedDate)}`,
       };
-      activityNote = `Scheduled callback for ${parsedDate.toLocaleString()}`;
+      activityNote = `Scheduled callback for ${formatToIST(parsedDate)}`;
     } else if (status === LeadStatus.WRONG_NUMBER) {
       activityAction = ActivityAction.WRONG_NUMBER;
+    } else if (status === LeadStatus.NOT_ANSWERED) {
+      activityAction = ActivityAction.NOT_ANSWERED;
     }
 
     // Save Note historically if noteText is provided
@@ -272,7 +275,7 @@ export async function scheduleSiteVisitAction(
       leadId: lead._id,
       userId: session.userId,
       action: ActivityAction.SITE_VISIT_SCHEDULED,
-      note: `Site visit scheduled for ${parsedDate.toLocaleString()}. Notes: ${notes || "None"}`,
+      note: `Site visit scheduled for ${formatToIST(parsedDate)}. Notes: ${notes || "None"}`,
       metadata: {
         siteVisitDate: parsedDate.toISOString(),
         siteVisitStatus: SiteVisitStatus.SCHEDULED,

@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { LeadStatus, ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
 interface PopulatedLead {
@@ -51,6 +52,8 @@ function getStatusStyles(status: LeadStatus) {
       return "bg-red-50 text-red-700 border-red-200";
     case LeadStatus.WRONG_NUMBER:
       return "bg-orange-50 text-orange-700 border-orange-200";
+    case LeadStatus.NOT_ANSWERED:
+      return "bg-yellow-55 text-yellow-755 border-yellow-250";
     case LeadStatus.ADMIN_FOLLOWUP:
       return "bg-cyan-50 text-cyan-755 border-cyan-200";
     case LeadStatus.NEGOTIATION:
@@ -294,7 +297,7 @@ export default function FollowupsDashboardView({
                     {/* Next Followup */}
                     <td className="px-6 py-4 font-mono text-slate-500">
                       {lead.nextFollowUp ? (
-                        new Date(lead.nextFollowUp).toLocaleString()
+                        formatToIST(lead.nextFollowUp)
                       ) : (
                         <span className="text-slate-400 italic">None Scheduled</span>
                       )}
@@ -315,13 +318,7 @@ export default function FollowupsDashboardView({
           ) : (
             activeLeads.map((lead) => {
               const followUpDateStr = lead.nextFollowUp ? (
-                new Date(lead.nextFollowUp).toLocaleString([], {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                formatToIST(lead.nextFollowUp)
               ) : (
                 "None Scheduled"
               );

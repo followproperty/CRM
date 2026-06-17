@@ -34,6 +34,8 @@ function getStatusStyles(status: LeadStatus) {
       return "bg-orange-50 text-orange-705 border-orange-200";
     case LeadStatus.ADMIN_FOLLOWUP:
       return "bg-cyan-50 text-cyan-755 border-cyan-200";
+    case LeadStatus.NOT_ANSWERED:
+      return "bg-yellow-50 text-yellow-700 border-yellow-250";
     default:
       return "bg-slate-50 text-slate-650 border-slate-200";
   }
@@ -436,6 +438,15 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                 </button>
 
                 <button
+                  onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_ANSWERED)}
+                  disabled={isPending}
+                  className="flex items-center gap-3 w-full py-3 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 rounded-xl font-bold text-sm border border-yellow-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
+                >
+                  <span className="text-base">📳</span>
+                  Not Answered
+                </button>
+
+                <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_INTERESTED)}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl font-bold text-sm border border-rose-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
@@ -498,6 +509,36 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                   onChange={(e) => setCallbackDate(e.target.value)}
                   className="w-full bg-white border border-slate-200 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none transition-all touch-manipulation"
                 />
+                <div className="flex gap-2 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      const yyyy = tomorrow.getFullYear();
+                      const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+                      const dd = String(tomorrow.getDate()).padStart(2, "0");
+                      setCallbackDate(`${yyyy}-${mm}-${dd}T11:00`);
+                    }}
+                    className="flex-1 py-1.5 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] transition-colors cursor-pointer text-center"
+                  >
+                    📅 Tomorrow (11 AM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dayAfter = new Date();
+                      dayAfter.setDate(dayAfter.getDate() + 2);
+                      const yyyy = dayAfter.getFullYear();
+                      const mm = String(dayAfter.getMonth() + 1).padStart(2, "0");
+                      const dd = String(dayAfter.getDate()).padStart(2, "0");
+                      setCallbackDate(`${yyyy}-${mm}-${dd}T11:00`);
+                    }}
+                    className="flex-1 py-1.5 px-3 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] transition-colors cursor-pointer text-center"
+                  >
+                    📅 Day After (11 AM)
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">

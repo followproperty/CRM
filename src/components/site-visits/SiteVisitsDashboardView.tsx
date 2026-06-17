@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { SiteVisitStatus, LeadStatus, ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 import { startNegotiationAction, markCustomerWonAction, markCustomerLostAction } from "@/app/actions/leads";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
@@ -359,7 +360,7 @@ export default function SiteVisitsDashboardView({
                       {/* Visit Date */}
                       <td className="px-6 py-4 font-mono text-slate-600">
                         {lead.siteVisitDate ? (
-                          new Date(lead.siteVisitDate).toLocaleString()
+                          formatToIST(lead.siteVisitDate)
                         ) : (
                           <span className="text-slate-400 italic">Not Scheduled</span>
                         )}
@@ -499,13 +500,7 @@ export default function SiteVisitsDashboardView({
               const wonDateStr = lead.wonAt ? new Date(lead.wonAt).toLocaleDateString() : "";
               const lostDateStr = lead.lostAt ? new Date(lead.lostAt).toLocaleDateString() : "";
               const visitDateStr = lead.siteVisitDate ? (
-                new Date(lead.siteVisitDate).toLocaleString([], {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                formatToIST(lead.siteVisitDate)
               ) : (
                 "Not Scheduled"
               );

@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { UserRole } from "@/types/user";
 import { redirect } from "next/navigation";
 import mongoose from "mongoose";
+import { formatToISTShort } from "@/lib/date";
 
 // Register Mongoose schemas to avoid lazy loading missing model errors
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -103,7 +104,7 @@ export default async function SuperAdminLogsPage() {
                     </div>
                   </div>
                   <span className="text-[10px] text-slate-400 shrink-0 font-mono">
-                    {new Date(act.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {formatToISTShort(act.createdAt)}
                   </span>
                 </div>
               );

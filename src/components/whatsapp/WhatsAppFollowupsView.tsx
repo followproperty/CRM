@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { LeadStatus, ILead, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 import { markWhatsAppDetailsSentAction, startAdminFollowupAction } from "@/app/actions/leads";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
@@ -195,7 +196,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
                 filteredLeads.map((lead) => {
                   const leadId = lead._id;
                   const handoffDateStr = lead.handedOffAt
-                    ? new Date(lead.handedOffAt).toLocaleString()
+                    ? formatToIST(lead.handedOffAt)
                     : "Unknown Date";
 
                   return (
@@ -295,13 +296,7 @@ export default function WhatsAppFollowupsView({ leads }: WhatsAppFollowupsViewPr
             filteredLeads.map((lead) => {
               const leadId = lead._id;
               const handoffDateStr = lead.handedOffAt
-                ? new Date(lead.handedOffAt).toLocaleString([], {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                ? formatToIST(lead.handedOffAt)
                 : "Unknown Date";
 
               return (

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { getLeadNotesAction, addLeadNoteAction, PopulatedNote } from "@/app/actions/notes";
 import { ILead, LeadStatus, LEAD_STATUS_LABELS, getWhatsAppUrl } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 import { UserRole } from "@/types/user";
 
 interface LeadDetailsModalProps {
@@ -35,6 +36,8 @@ function getStatusStyles(status: LeadStatus) {
       return "bg-red-50 text-red-700 border-red-200";
     case LeadStatus.WRONG_NUMBER:
       return "bg-orange-50 text-orange-700 border-orange-200";
+    case LeadStatus.NOT_ANSWERED:
+      return "bg-yellow-50 text-yellow-700 border-yellow-250";
     case LeadStatus.ADMIN_FOLLOWUP:
       return "bg-cyan-50 text-cyan-700 border-cyan-200";
     case LeadStatus.NEGOTIATION:
@@ -270,13 +273,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
               ) : (
                 <div className="relative border-l-2 border-slate-200 ml-3.5 pl-6 space-y-5">
                   {notes.map((note) => {
-                    const formattedTime = new Date(note.createdAt).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
+                    const formattedTime = formatToIST(note.createdAt);
 
                     const roleBadgeColor = note.user?.role === "SUPER_ADMIN" ? "bg-purple-50 text-purple-700 border border-purple-200" :
                                            note.user?.role === "ADMIN" ? "bg-indigo-50 text-indigo-700 border border-indigo-200" :

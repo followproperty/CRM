@@ -2,6 +2,7 @@ import React from "react";
 import dbConnect from "@/lib/db";
 import Lead from "@/models/lead.model";
 import { LeadStatus } from "@/types/lead";
+import { formatToIST } from "@/lib/date";
 
 export const revalidate = 0;
 
@@ -18,7 +19,7 @@ export default async function DataEntryDashboard() {
 
   // Fetch the latest created lead for sync timestamp
   const latestLead = await Lead.findOne({}).sort({ createdAt: -1 }).lean();
-  const lastSyncStr = latestLead ? new Date(latestLead.createdAt).toLocaleString() : "Never";
+  const lastSyncStr = latestLead ? formatToIST(latestLead.createdAt) : "Never";
   const lastSyncName = latestLead ? `Latest: ${latestLead.name}` : "No leads in system";
 
   // Fetch the 5 most recently created leads
@@ -148,7 +149,7 @@ export default async function DataEntryDashboard() {
                         <td className="py-3 font-semibold text-slate-800">{lead.name}</td>
                         <td className="py-3 text-slate-500 font-mono">{lead.phone}</td>
                         <td className="py-3 text-slate-600">{lead.source}</td>
-                        <td className="py-3 text-slate-400">{new Date(lead.createdAt).toLocaleString()}</td>
+                        <td className="py-3 text-slate-400">{formatToIST(lead.createdAt)}</td>
                         <td className="py-3">
                           <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${statusColor}`}>
                             {lead.status}
