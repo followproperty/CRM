@@ -8,6 +8,7 @@ interface EligibleUser {
   name: string;
   role: string;
   activeCount?: number;
+  totalCount?: number;
 }
 
 interface AssigneeSelectProps {
@@ -62,7 +63,7 @@ export default function AssigneeSelect({
 
           return (
             <option key={user._id} value={user._id} disabled={isDisabled}>
-              {user.name} ({count}/{isCaller ? activeCap : "∞"}{isFull ? " FULL" : ""})
+              {user.name} ({count}/{user.totalCount ?? 0}{isFull ? " FULL" : ""})
             </option>
           );
         })}

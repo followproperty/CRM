@@ -311,7 +311,7 @@ export default function SuperAdminLeadsTable({
                   <div className="flex justify-between items-center gap-1.5">
                     <span className="font-bold text-slate-800 text-xs truncate" title={user.name}>{user.name}</span>
                     <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${isFull ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-                      {user.activeCount}/{activeCap} Active
+                      {user.activeCount}/{user.totalCount} Active
                     </span>
                   </div>
                   
@@ -375,7 +375,7 @@ export default function SuperAdminLeadsTable({
                 const isFull = isCaller && user.activeCount >= activeCap;
                 return (
                   <option key={user._id} value={user._id} disabled={isFull}>
-                    {user.name} ({user.activeCount}/{isCaller ? activeCap : "∞"}{isFull ? " - FULL" : ""})
+                    {user.name} ({user.activeCount}/{user.totalCount}{isFull ? " - FULL" : ""})
                   </option>
                 );
               })}
@@ -506,7 +506,7 @@ export default function SuperAdminLeadsTable({
                     const isFull = isCaller && user.activeCount >= activeCap;
                     return (
                       <option key={user._id} value={user._id} disabled={isFull}>
-                        {user.name} ({user.activeCount}/{isCaller ? activeCap : "∞"}{isFull ? " FULL" : ""})
+                        {user.name} ({user.activeCount}/{user.totalCount}{isFull ? " FULL" : ""})
                       </option>
                     );
                   })}
