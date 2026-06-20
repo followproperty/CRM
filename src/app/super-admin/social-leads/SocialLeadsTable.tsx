@@ -658,7 +658,7 @@ export default function SocialLeadsTable({
                     href={activeLead.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-[0.98]"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-[0.98]"
                   >
                     Open Original Post
                   </a>
