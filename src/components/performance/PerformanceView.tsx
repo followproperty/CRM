@@ -45,6 +45,7 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
     [LeadStatus.WRONG_NUMBER]: "bg-orange-500",
     [LeadStatus.DND]: "bg-red-500",
     [LeadStatus.NOT_ANSWERED]: "bg-yellow-500",
+    [LeadStatus.MAYBE_LATER]: "bg-pink-500",
   };
 
   const getStatusColor = (status: LeadStatus) => {

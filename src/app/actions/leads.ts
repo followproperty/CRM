@@ -166,6 +166,8 @@ export async function updateLeadStatusAction(
       activityAction = ActivityAction.WRONG_NUMBER;
     } else if (status === LeadStatus.NOT_ANSWERED) {
       activityAction = ActivityAction.NOT_ANSWERED;
+    } else if (status === LeadStatus.MAYBE_LATER) {
+      activityAction = ActivityAction.MAYBE_LATER;
     }
 
     // Save Note historically if noteText is provided

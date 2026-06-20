@@ -18,6 +18,7 @@ export enum LeadStatus {
   WRONG_NUMBER = "WRONG_NUMBER",
   ADMIN_FOLLOWUP = "ADMIN_FOLLOWUP",
   NOT_ANSWERED = "NOT_ANSWERED",
+  MAYBE_LATER = "MAYBE_LATER",
 }
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -35,6 +36,7 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   [LeadStatus.WRONG_NUMBER]: "Wrong Number",
   [LeadStatus.DND]: "DND (Do Not Disturb)",
   [LeadStatus.NOT_ANSWERED]: "Not Answered",
+  [LeadStatus.MAYBE_LATER]: "Maybe Later",
 };
 
 

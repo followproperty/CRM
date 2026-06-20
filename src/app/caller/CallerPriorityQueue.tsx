@@ -53,7 +53,8 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     (l: ILead) =>
       l.status !== LeadStatus.CUSTOMER &&
       l.status !== LeadStatus.NOT_INTERESTED &&
-      l.status !== LeadStatus.LOST
+      l.status !== LeadStatus.LOST &&
+      l.status !== LeadStatus.MAYBE_LATER
   );
 
   // Reminders List
@@ -81,11 +82,6 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   // Action execution helpers
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
-    
-    if (status === LeadStatus.NOT_INTERESTED && !outcomeNote.trim()) {
-      showMessage("Please enter notes / reason for Not Interested status.", true);
-      return;
-    }
 
     // For Follow Up, bridge to the Callback Modal
     if (status === LeadStatus.FOLLOW_UP) {
@@ -275,6 +271,8 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : lead.status === LeadStatus.NOT_ANSWERED
                             ? "bg-yellow-50 text-yellow-700 border border-yellow-250"
+                            : lead.status === LeadStatus.MAYBE_LATER
+                            ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200"
                             : "bg-slate-50 text-slate-605 border border-slate-200"
                         }`}
                       >
@@ -465,6 +463,15 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 >
                   <span className="text-base">🔴</span>
                   Not Interested
+                </button>
+
+                <button
+                  onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.MAYBE_LATER)}
+                  disabled={isPending}
+                  className="flex items-center gap-3 w-full py-3 px-4 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 rounded-xl font-bold text-sm border border-fuchsia-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
+                >
+                  <span className="text-base">⏳</span>
+                  Maybe Later
                 </button>
 
                 <button

@@ -28,6 +28,8 @@ function getStatusStyles(status: LeadStatus) {
       return "bg-amber-50 text-amber-755 border-amber-200";
     case LeadStatus.NOT_INTERESTED:
       return "bg-rose-50 text-rose-700 border-rose-200";
+    case LeadStatus.MAYBE_LATER:
+      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
     case LeadStatus.DND:
       return "bg-red-50 text-red-700 border-red-200";
     case LeadStatus.WRONG_NUMBER:
@@ -70,11 +72,6 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
-    
-    if (status === LeadStatus.NOT_INTERESTED && !outcomeNote.trim()) {
-      showMessage("Please enter notes / reason for Not Interested status.", true);
-      return;
-    }
 
     // For Follow Up (Call Later), bridge to the Callback Modal
     if (status === LeadStatus.FOLLOW_UP) {
@@ -453,6 +450,15 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                 >
                   <span className="text-base">🔴</span>
                   Not Interested
+                </button>
+
+                <button
+                  onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.MAYBE_LATER)}
+                  disabled={isPending}
+                  className="flex items-center gap-3 w-full py-3 px-4 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 rounded-xl font-bold text-sm border border-fuchsia-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
+                >
+                  <span className="text-base">⏳</span>
+                  Maybe Later
                 </button>
 
                 <button

@@ -51,6 +51,8 @@ function getStatusStyles(status: string) {
       return "bg-amber-50 text-amber-805 border-amber-200";
     case "NOT_INTERESTED":
       return "bg-rose-50 text-rose-700 border-rose-200";
+    case "MAYBE_LATER":
+      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
     case "DND":
       return "bg-red-50 text-red-700 border-red-200";
     default:

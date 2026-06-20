@@ -98,7 +98,8 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
       ActivityAction.DND,
       ActivityAction.CALL_LATER,
       ActivityAction.WRONG_NUMBER,
-      ActivityAction.NOT_ANSWERED
+      ActivityAction.NOT_ANSWERED,
+      ActivityAction.MAYBE_LATER
     ];
 
     // Queries
@@ -265,7 +266,8 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
       ActivityAction.DND,
       ActivityAction.CALL_LATER,
       ActivityAction.WRONG_NUMBER,
-      ActivityAction.NOT_ANSWERED
+      ActivityAction.NOT_ANSWERED,
+      ActivityAction.MAYBE_LATER
     ];
 
     const callers = await Promise.all(
