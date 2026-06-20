@@ -90,6 +90,7 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
     [UserRole.SUPER_ADMIN]: [
       { title: "System Overview", href: "/super-admin", icon: <Icons.Dashboard /> },
       { title: "Leads Registry", href: "/super-admin/leads", icon: <Icons.Leads /> },
+      { title: "Social Leads", href: "/super-admin/social-leads", icon: <Icons.Database /> },
       { title: "Follow-ups", href: "/super-admin/followups", icon: <Icons.Phone /> },
       { title: "Site Visits", href: "/super-admin/site-visits", icon: <Icons.Verify /> },
       { title: "WhatsApp Follow-ups", href: "/super-admin/whatsapp", icon: <Icons.Chat /> },

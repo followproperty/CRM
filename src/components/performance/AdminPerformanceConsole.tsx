@@ -43,7 +43,7 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
           <h2 className="text-xs font-bold text-slate-705 uppercase tracking-wider">Callers Summary Overview</h2>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-205 text-slate-500 uppercase tracking-wider font-bold text-[10px]">
@@ -118,6 +118,71 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden divide-y divide-slate-100 bg-white">
+          {callers.map((c) => {
+            const todayProgressPct = c.assignedToday > 0 ? Math.round((c.calledToday / c.assignedToday) * 100) : 0;
+            const isSelected = selectedCallerId === c.callerId;
+
+            return (
+              <div 
+                key={c.callerId} 
+                className={`p-4 space-y-3.5 ${isSelected ? 'bg-indigo-50/10' : ''}`}
+              >
+                <div className="flex justify-between items-start gap-2.5">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">{c.name}</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{c.email}</p>
+                  </div>
+                  <button
+                    onClick={() => handleSelectCaller(c.callerId)}
+                    disabled={isPending && isSelected}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-655 border border-slate-205 active:scale-[0.98]"
+                    }`}
+                  >
+                    {isPending && isSelected ? "Loading..." : "View Performance"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center pt-2.5 border-t border-slate-100/70">
+                  <div>
+                    <span className="text-slate-400 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Calls</span>
+                    <span className="font-bold text-slate-800 text-sm">{c.callsToday}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Progress</span>
+                    <div className="inline-flex flex-col items-center">
+                      <span className="font-bold text-slate-700 text-xs">
+                        {c.calledToday} <span className="text-slate-400 font-normal">/ {c.assignedToday}</span>
+                      </span>
+                      {c.assignedToday > 0 && (
+                        <span className="text-[9px] font-extrabold text-emerald-650 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-100 mt-0.5">
+                          {todayProgressPct}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Active/Total</span>
+                    <span className="font-bold text-slate-700 text-xs">
+                      {c.activeLeads} <span className="text-slate-400 font-normal">/ {c.totalAssigned}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {callers.length === 0 && (
+            <div className="p-8 text-center text-slate-400 italic text-xs">
+              No active callers found in the system.
+            </div>
+          )}
         </div>
       </div>
 
