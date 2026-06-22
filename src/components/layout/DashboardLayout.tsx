@@ -4,7 +4,6 @@ import { useState, useEffect, useTransition } from "react";
 import { Sidebar } from "./Sidebar";
 import { UserRole } from "@/types/user";
 import {
-  getMyNotificationsAction,
   markNotificationReadAction,
   markAllNotificationsReadAction,
 } from "@/app/actions/notifications";
@@ -42,10 +41,16 @@ export function DashboardLayout({ children, role, userName, userEmail }: Dashboa
     let active = true;
 
     const fetchNotifications = async () => {
-      const result = await getMyNotificationsAction();
-      if (active && result.success && result.notifications) {
-        setNotifications(result.notifications);
-        setUnreadCount(result.unreadCount ?? 0);
+      try {
+        const res = await fetch("/api/notifications");
+        if (!res.ok) return;
+        const result = await res.json();
+        if (active && result.success && result.notifications) {
+          setNotifications(result.notifications);
+          setUnreadCount(result.unreadCount ?? 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
       }
     };
 
