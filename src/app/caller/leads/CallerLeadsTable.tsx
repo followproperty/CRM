@@ -72,6 +72,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     setTimeout(() => setMessage(null), 4000);
   };
 
+  const refreshPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("_t", Date.now().toString());
+    router.replace(`${window.location.pathname}?${params.toString()}`);
+  };
+
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
 
@@ -90,7 +96,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
         setActiveOutcomeLead(null);
         setOutcomeNote("");
-        router.refresh();
+        refreshPage();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
       }
@@ -105,7 +111,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         showMessage("WhatsApp follow-up requested with Admin.");
         setActiveOutcomeLead(null);
         setOutcomeNote("");
-        router.refresh();
+        refreshPage();
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
       }
@@ -124,7 +130,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         setCallbackLead(null);
         setCallbackDate("");
         setCallbackNote("");
-        router.refresh();
+        refreshPage();
       } else {
         showMessage(result.error || "Failed to schedule callback.", true);
       }
@@ -143,7 +149,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         setSiteVisitLead(null);
         setSiteVisitDate("");
         setSiteVisitNotes("");
-        router.refresh();
+        refreshPage();
       } else {
         showMessage(result.error || "Failed to schedule site visit.", true);
       }
