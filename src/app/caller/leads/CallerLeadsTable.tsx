@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateLeadStatusAction, scheduleSiteVisitAction, requestWhatsAppFollowupAction } from "@/app/actions/leads";
 import { LeadStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
 import { UserRole } from "@/types/user";
@@ -44,6 +45,7 @@ function getStatusStyles(status: LeadStatus) {
 }
 
 export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -88,6 +90,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
         setActiveOutcomeLead(null);
         setOutcomeNote("");
+        router.refresh();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
       }
@@ -102,6 +105,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         showMessage("WhatsApp follow-up requested with Admin.");
         setActiveOutcomeLead(null);
         setOutcomeNote("");
+        router.refresh();
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
       }
@@ -120,6 +124,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         setCallbackLead(null);
         setCallbackDate("");
         setCallbackNote("");
+        router.refresh();
       } else {
         showMessage(result.error || "Failed to schedule callback.", true);
       }
@@ -138,6 +143,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         setSiteVisitLead(null);
         setSiteVisitDate("");
         setSiteVisitNotes("");
+        router.refresh();
       } else {
         showMessage(result.error || "Failed to schedule site visit.", true);
       }

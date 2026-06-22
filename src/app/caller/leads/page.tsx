@@ -104,8 +104,14 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
       ...(uploadedLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
     ];
 
-    // Sort by updatedAt descending
+    // Sort: NEW leads at the top, others sorted by updatedAt descending
     mergedLeads.sort((a, b) => {
+      const isNewA = a.status === LeadStatus.NEW;
+      const isNewB = b.status === LeadStatus.NEW;
+
+      if (isNewA && !isNewB) return -1;
+      if (!isNewA && isNewB) return 1;
+
       const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
       const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
       return dateB - dateA;
