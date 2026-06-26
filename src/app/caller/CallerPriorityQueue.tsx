@@ -92,12 +92,14 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       return;
     }
 
+    // Close modal immediately for instant UI response
+    setActiveOutcomeLead(null);
+    setOutcomeNote("");
+
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
-        setActiveOutcomeLead(null);
-        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
       }
@@ -106,12 +108,15 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
   const handleRequestWhatsApp = (lead: ILead) => {
     const leadId = lead._id ? lead._id.toString() : "";
+
+    // Close modal immediately for instant UI response
+    setActiveOutcomeLead(null);
+    setOutcomeNote("");
+
     startTransition(async () => {
       const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
       if (result.success) {
         showMessage("WhatsApp follow-up requested with Admin.");
-        setActiveOutcomeLead(null);
-        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
       }
@@ -123,13 +128,16 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     if (!callbackLead || !callbackDate) return;
     
     const leadId = callbackLead._id ? callbackLead._id.toString() : "";
+
+    // Close modal immediately for instant UI response
+    setCallbackLead(null);
+    setCallbackDate("");
+    setCallbackNote("");
+
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, LeadStatus.FOLLOW_UP, callbackDate, callbackNote, callbackLead.collectionType);
       if (result.success) {
         showMessage("Follow-up callback scheduled successfully.");
-        setCallbackLead(null);
-        setCallbackDate("");
-        setCallbackNote("");
       } else {
         showMessage(result.error || "Failed to schedule callback.", true);
       }
@@ -141,13 +149,16 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     if (!siteVisitLead || !siteVisitDate) return;
 
     const leadId = siteVisitLead._id ? siteVisitLead._id.toString() : "";
+
+    // Close modal immediately for instant UI response
+    setSiteVisitLead(null);
+    setSiteVisitDate("");
+    setSiteVisitNotes("");
+
     startTransition(async () => {
       const result = await scheduleSiteVisitAction(leadId, siteVisitDate, siteVisitNotes, siteVisitLead.collectionType);
       if (result.success) {
         showMessage("Site visit scheduled successfully.");
-        setSiteVisitLead(null);
-        setSiteVisitDate("");
-        setSiteVisitNotes("");
       } else {
         showMessage(result.error || "Failed to schedule site visit.", true);
       }
