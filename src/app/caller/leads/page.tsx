@@ -104,17 +104,46 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
       ...(uploadedLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
     ];
 
-    // Sort: NEW leads at the top, others sorted by updatedAt descending
+    // Get start of today in Indian Standard Time (IST) for called-today checks
+    const now = new Date();
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istTime = new Date(utcTime + (330 * 60000));
+    const istMidnight = new Date(
+      istTime.getFullYear(),
+      istTime.getMonth(),
+      istTime.getDate(),
+      0, 0, 0, 0
+    );
+    const startOfTodayIST = new Date(istMidnight.getTime() - (330 * 60000));
+
+    // Sort: NEW and uncalled-today leads at the top, called-today leads at the bottom
     mergedLeads.sort((a, b) => {
       const isNewA = a.status === LeadStatus.NEW;
       const isNewB = b.status === LeadStatus.NEW;
 
-      if (isNewA && !isNewB) return -1;
-      if (!isNewA && isNewB) return 1;
+      const wasCalledTodayA = !isNewA && a.updatedAt && new Date(a.updatedAt) >= startOfTodayIST;
+      const wasCalledTodayB = !isNewB && b.updatedAt && new Date(b.updatedAt) >= startOfTodayIST;
 
-      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      return dateB - dateA;
+      // Group 1: Not called today; Group 2: Called today (should go to bottom)
+      if (wasCalledTodayA && !wasCalledTodayB) return 1;
+      if (!wasCalledTodayA && wasCalledTodayB) return -1;
+
+      // If both are in the same group (both not called today, or both called today)
+      if (!wasCalledTodayA) {
+        // Pinned NEW leads at the top of Group 1
+        if (isNewA && !isNewB) return -1;
+        if (!isNewA && isNewB) return 1;
+
+        // Otherwise sort Group 1 by updatedAt descending (newest first)
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
+      } else {
+        // Group 2 (called today): Sort by updatedAt ascending (oldest first, so newest drops to bottom)
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateA - dateB;
+      }
     });
 
     // Serialize database models
