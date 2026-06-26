@@ -105,16 +105,17 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
     ];
 
     // Get start of today in Indian Standard Time (IST) for called-today checks
-    const now = new Date();
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const istTime = new Date(utcTime + (330 * 60000));
-    const istMidnight = new Date(
-      istTime.getFullYear(),
-      istTime.getMonth(),
-      istTime.getDate(),
-      0, 0, 0, 0
-    );
-    const startOfTodayIST = new Date(istMidnight.getTime() - (330 * 60000));
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const parts = formatter.formatToParts(new Date());
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    const startOfTodayIST = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
 
     // Sort: NEW and uncalled-today leads at the top, called-today leads at the bottom
     mergedLeads.sort((a, b) => {
