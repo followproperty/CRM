@@ -2,7 +2,10 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { encrypt, decrypt, SessionPayload } from "./session-crypto";
 
-const SECRET_KEY = process.env.JWT_SECRET || "aura_crm_super_secret_key_123456789";
+const SECRET_KEY = process.env.JWT_SECRET;
+if (!SECRET_KEY) {
+  throw new Error("JWT_SECRET environment variable is missing");
+}
 const key = new TextEncoder().encode(SECRET_KEY);
 
 export type { SessionPayload };
