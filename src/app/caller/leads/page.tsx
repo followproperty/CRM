@@ -46,6 +46,18 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
 
     if (statusFilter && statusFilter !== "ALL") {
       query.status = statusFilter;
+    } else if (!search) {
+      // By default (ALL) when not searching, exclude terminal/inactive leads from the caller registry view
+      query.status = {
+        $nin: [
+          LeadStatus.CUSTOMER,
+          LeadStatus.LOST,
+          LeadStatus.NOT_INTERESTED,
+          LeadStatus.DND,
+          LeadStatus.WRONG_NUMBER,
+          LeadStatus.MAYBE_LATER,
+        ],
+      };
     }
 
     // Query both collections concurrently

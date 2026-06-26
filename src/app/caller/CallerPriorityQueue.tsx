@@ -54,9 +54,11 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       l.status !== LeadStatus.CUSTOMER &&
       l.status !== LeadStatus.NOT_INTERESTED &&
       l.status !== LeadStatus.LOST &&
-      l.status !== LeadStatus.MAYBE_LATER
+      l.status !== LeadStatus.MAYBE_LATER &&
+      l.status !== LeadStatus.DND &&
+      l.status !== LeadStatus.WRONG_NUMBER
   );
-
+  
   // Reminders List
   const reminders = leads
     .filter((l: ILead) => l.followUp && l.followUp.status === FollowUpStatus.PENDING && l.followUp.date)
