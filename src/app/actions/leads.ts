@@ -3,11 +3,12 @@
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { getLeadModel } from "@/models/lead.model";
-import Activity from "@/models/activity.model";
+
 import User from "@/models/user.model";
 import Note from "@/models/note.model";
 import { getSession } from "@/lib/session";
 import { ActivityAction } from "@/types/activity";
+import { createAuditedActivity } from "@/lib/activity-audit";
 import { UserRole } from "@/types/user";
 import { revalidatePath } from "next/cache";
 import { LeadStatus, FollowUpStatus, SiteVisitStatus, ILead } from "@/types/lead";
@@ -59,7 +60,7 @@ export async function assignLeadAction(leadId: string, assigneeId: string | null
       await lead.save();
 
       // Log assignment activity
-      await Activity.create({
+      await createAuditedActivity({
         leadId: lead._id,
         userId: session.userId,
         action: ActivityAction.LEAD_ASSIGNED,
@@ -79,7 +80,7 @@ export async function assignLeadAction(leadId: string, assigneeId: string | null
       await lead.save();
 
       // Log unassignment activity
-      await Activity.create({
+      await createAuditedActivity({
         leadId: lead._id,
         userId: session.userId,
         action: ActivityAction.LEAD_ASSIGNED,
@@ -135,6 +136,7 @@ export async function updateLeadStatusAction(
     // Update status and last modifier details
     lead.status = status;
     lead.updatedBy = session.userId;
+    lead.updatedAt = new Date();
 
     let activityAction = ActivityAction.CALL_MADE;
     let activityNote = `Status updated to ${status}`;
@@ -187,8 +189,8 @@ export async function updateLeadStatusAction(
       await triggerInterestedLeadNotification(lead);
     }
 
-    // Log update activity
-    await Activity.create({
+    // Log update activity with auditing telemetry (IP, userAgent, sessionId, etc.)
+    await createAuditedActivity({
       leadId: lead._id,
       userId: session.userId,
       action: activityAction,
@@ -273,7 +275,7 @@ export async function scheduleSiteVisitAction(
     await triggerSiteVisitScheduledNotification(lead);
 
     // Log update activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId: lead._id,
       userId: session.userId,
       action: ActivityAction.SITE_VISIT_SCHEDULED,
@@ -320,7 +322,7 @@ export async function startNegotiationAction(leadId: string, collectionType?: st
     await lead.save();
 
     // Log activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId,
       userId: session.userId,
       action: ActivityAction.NEGOTIATION_STARTED,
@@ -364,7 +366,7 @@ export async function markCustomerWonAction(leadId: string, collectionType?: str
     await triggerCustomerWonNotification(lead);
 
     // Log activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId,
       userId: session.userId,
       action: ActivityAction.CUSTOMER_WON,
@@ -414,7 +416,7 @@ export async function markCustomerLostAction(
     await lead.save();
 
     // Log activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId,
       userId: session.userId,
       action: ActivityAction.CUSTOMER_LOST,
@@ -463,7 +465,7 @@ export async function requestWhatsAppFollowupAction(leadId: string, collectionTy
     await triggerAdminHandoffNotification(lead);
 
     // Log Activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId: lead._id,
       userId: session.userId,
       action: ActivityAction.ADMIN_HANDOFF_REQUESTED,
@@ -507,7 +509,7 @@ export async function markWhatsAppDetailsSentAction(leadId: string, collectionTy
     await triggerWhatsAppDetailsSentNotification(lead);
 
     // Log Activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId: lead._id,
       userId: session.userId,
       action: ActivityAction.WHATSAPP_DETAILS_SENT,
@@ -548,7 +550,7 @@ export async function startAdminFollowupAction(leadId: string, collectionType?: 
     await lead.save();
 
     // Log Activity
-    await Activity.create({
+    await createAuditedActivity({
       leadId: lead._id,
       userId: session.userId,
       action: ActivityAction.ADMIN_FOLLOWUP_STARTED,
@@ -651,7 +653,7 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
 
     // Log individual lead activity entries for audit trail
     const activityPromises = leadIds.map(leadId => 
-      Activity.create({
+      createAuditedActivity({
         leadId,
         userId: session.userId,
         action: ActivityAction.LEAD_ASSIGNED,
@@ -782,7 +784,7 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
       }
 
       // Log individual activity entry for audit trail
-      await Activity.create({
+      await createAuditedActivity({
         leadId: lead._id,
         userId: session.userId,
         action: ActivityAction.LEAD_ASSIGNED,
