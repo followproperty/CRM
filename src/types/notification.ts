@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import type { Types } from "mongoose";
 
 /**
  * TypeScript Interface representing an in-app Notification

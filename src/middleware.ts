@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { decrypt } from "./lib/session";
+import { decrypt } from "./lib/session-crypto";
 
 // Define routes that do not require auth
 const publicRoutes = ["/login"];

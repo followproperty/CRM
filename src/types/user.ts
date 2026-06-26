@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import type { Types } from "mongoose";
 
 /**
  * User Role Types for the Real Estate CRM

@@ -1,35 +1,12 @@
-import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { UserRole } from "@/types/user";
+import { jwtVerify } from "jose";
+import { encrypt, decrypt, SessionPayload } from "./session-crypto";
 
 const SECRET_KEY = process.env.JWT_SECRET || "aura_crm_super_secret_key_123456789";
 const key = new TextEncoder().encode(SECRET_KEY);
 
-export interface SessionPayload {
-  userId: string;
-  email: string;
-  role: UserRole;
-  name: string;
-}
-
-export async function encrypt(payload: SessionPayload): Promise<string> {
-  return await new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("24h")
-    .sign(key);
-}
-
-export async function decrypt(input: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(input, key, {
-      algorithms: ["HS256"],
-    });
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
-  }
-}
+export type { SessionPayload };
+export { encrypt, decrypt };
 
 export async function createSession(payload: SessionPayload): Promise<void> {
   const token = await encrypt(payload);
@@ -39,7 +16,7 @@ export async function createSession(payload: SessionPayload): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 60 * 60 * 4, // 4 hours
   });
 }
 
@@ -47,7 +24,29 @@ export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
   if (!sessionCookie) return null;
-  return await decrypt(sessionCookie);
+  
+  try {
+    const { payload } = await jwtVerify(sessionCookie, key, {
+      algorithms: ["HS256"],
+    });
+    return payload as unknown as SessionPayload;
+  } catch (error: unknown) {
+    const jwtError = error as { code?: string };
+    if (jwtError?.code === "ERR_JWT_EXPIRED") {
+      try {
+        const { decodeJwt } = await import("jose");
+        const payload = decodeJwt(sessionCookie) as unknown as SessionPayload;
+        if (payload?.sessionId) {
+          const { markSessionExpired } = await import("./session-expiry");
+          // Mark session expired asynchronously in the database
+          await markSessionExpired(payload.sessionId);
+        }
+      } catch (err) {
+        console.error("Failed to mark session as expired during getSession:", err);
+      }
+    }
+    return null;
+  }
 }
 
 export async function destroySession(): Promise<void> {

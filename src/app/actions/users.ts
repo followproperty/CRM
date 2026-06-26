@@ -2,7 +2,7 @@
 
 import dbConnect from "@/lib/db";
 import User from "@/models/user.model";
-import Activity from "@/models/activity.model";
+import { createAuditedActivity } from "@/lib/activity-audit";
 import { getSession } from "@/lib/session";
 import { ActivityAction } from "@/types/activity";
 import { UserRole } from "@/types/user";
@@ -58,7 +58,7 @@ export async function createUserAction(formData: FormData): Promise<UserActionRe
     });
 
     // Log user creation activity
-    await Activity.create({
+    await createAuditedActivity({
       userId: session.userId,
       action: ActivityAction.USER_CREATED,
       note: `Created user account: ${name} (${role})`,
@@ -105,7 +105,7 @@ export async function toggleUserStatusAction(userId: string, currentIsActive: bo
     }
 
     // Log status change activity
-    await Activity.create({
+    await createAuditedActivity({
       userId: session.userId,
       action: ActivityAction.USER_STATUS_CHANGED,
       note: `${newIsActive ? "Activated" : "Deactivated"} user account: ${updatedUser.name}`,

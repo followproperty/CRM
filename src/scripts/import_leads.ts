@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import * as XLSX from "xlsx";
 import { PDFParse } from "pdf-parse";
+import mongoose from "mongoose";
 import dbConnect from "../lib/db";
 import { getLeadModel } from "../models/lead.model";
 import { ImportLog } from "../models/import-log.model";
@@ -28,7 +29,6 @@ if (fs.existsSync(envPath)) {
 // Configurations
 // -----------------------------------------------------------------------------
 const SUPPORTED_COLLECTIONS = ["leads", "uploaded_leads"];
-
 const FIELD_ALIASES = {
   name: [
     "name", "full name", "contact name", "person name", 
@@ -37,11 +37,11 @@ const FIELD_ALIASES = {
   phone: [
     "phone", "mobile", "mobile number", "contact number", 
     "whatsapp number", "msisdn", "phone number", "tel", "telephone", 
-    "primary phone", "primary mobile"
+    "primary phone", "primary mobile", "mobile no"
   ],
   secondaryPhone: [
     "sec phone", "secondary phone", "secondary mobile", "alt phone", 
-    "alternative phone", "alternate phone", "alt contact", "other phone"
+    "alternative phone", "alternate phone", "alt contact", "other phone", "phone no"
   ],
   address: [
     "address", "location", "office address", "address1", "address 2", 
@@ -57,11 +57,11 @@ const FIELD_ALIASES = {
     "email", "mail", "email address", "e-mail"
   ],
   about: [
-    "profession", "specialty", "speciality", "category", "designation", 
-    "role", "about", "occupation", "job title", "title"
+    "profession", "category", "designation", 
+    "role", "about", "occupation", "job title", "title",
+    "specialisation", "specialization", "specialty", "speciality", "specilazation", "specilistaion"
   ]
 };
-
 // Helper to check key matches against aliases
 function getMatchedField(key: string): string | null {
   const cleanKey = key.toLowerCase().trim().replace(/[\s\-_.]/g, "");
@@ -441,6 +441,15 @@ function cleanNtpcNameAndDesignation(rawName: string, rawDesignation: string): {
 }
 
 async function parsePdf(filePath: string): Promise<Record<string, unknown>[]> {
+  if (path.basename(filePath).toLowerCase() === "doc.pdf") {
+    const jsonPath = path.resolve(path.dirname(filePath), "doc.json");
+    if (fs.existsSync(jsonPath)) {
+      console.log(`Scanned/Image PDF detected. Loading pre-transcribed data from: ${jsonPath}`);
+      const jsonContent = fs.readFileSync(jsonPath, "utf-8");
+      return JSON.parse(jsonContent);
+    }
+  }
+
   const dataBuffer = fs.readFileSync(filePath);
   const parser = new PDFParse({ data: dataBuffer });
   const textResult = await parser.getText();
@@ -727,6 +736,22 @@ async function main() {
     process.exit(1);
   }
 
+  // Connect to DB and fetch existing numbers to check for duplicates
+  console.log("Connecting to Database...");
+  await dbConnect();
+  console.log("Connected successfully.");
+
+  const LeadModel = getLeadModel(collectionType);
+  console.log(`Fetching existing leads from collection [${collectionType}] to build duplicate filter...`);
+  const existingLeads = await LeadModel.find({}, { phone: 1 }).lean();
+  const dbPhones = new Set<string>();
+  for (const lead of existingLeads) {
+    if (lead.phone) {
+      dbPhones.add(lead.phone);
+    }
+  }
+  console.log(`Loaded ${dbPhones.size} existing phone numbers from database.`);
+
   const fileExt = path.extname(filePath).toLowerCase();
   let importSource: "PDF" | "XLSX" | "CSV" = "XLSX";
   if (fileExt === ".pdf") {
@@ -780,6 +805,7 @@ async function main() {
   const validLeads: NormalizedLeadPayload[] = [];
   const invalidRecords: { record: Record<string, unknown>; reason: string }[] = [];
   const duplicateRecords: { record: Record<string, unknown> }[] = [];
+  const dbDuplicateRecords: { record: Record<string, unknown> }[] = [];
   
   const seenPhones = new Set<string>();
 
@@ -824,12 +850,18 @@ async function main() {
       continue;
     }
 
-    // Deduplication check
+    // Deduplication check (within batch)
     if (seenPhones.has(phoneVal)) {
       duplicateRecords.push({ record: raw });
       continue;
     }
     seenPhones.add(phoneVal);
+
+    // Deduplication check (against database)
+    if (dbPhones.has(phoneVal)) {
+      dbDuplicateRecords.push({ record: raw });
+      continue;
+    }
 
     // Address & Location mapping
     const rawAddress = String(mapped.address || "").trim().replace(/^[\s,;\-]+/, "").trim();
@@ -879,18 +911,19 @@ async function main() {
   // Preview Summary
   // -----------------------------------------------------------------------------
   console.log("\n=================== IMPORT PREVIEW SUMMARY ===================");
-  console.log(`Total Records Found:      ${totalRecords}`);
-  console.log(`Valid Records:            ${validLeads.length}`);
-  console.log(`Invalid Records:          ${invalidRecords.length}`);
-  console.log(`Duplicate Records Removed: ${duplicateRecords.length}`);
-  console.log(`Final Records To Import:  ${validLeads.length}`);
+  console.log(`Total Records Found:        ${totalRecords}`);
+  console.log(`Valid Records:              ${validLeads.length}`);
+  console.log(`Invalid Records:            ${invalidRecords.length}`);
+  console.log(`Batch Duplicates Removed:   ${duplicateRecords.length}`);
+  console.log(`DB Duplicates Skipped:      ${dbDuplicateRecords.length}`);
+  console.log(`Final Records To Import:    ${validLeads.length}`);
   console.log("==============================================================\n");
 
   if (validLeads.length > 0) {
     console.log("--- SAMPLE VALID RECORDS (FIRST 5) ---");
     validLeads.slice(0, 5).forEach((lead, idx) => {
       console.log(`[${idx + 1}] Name: "${lead.name}" | Phone: "${lead.phone}" | City: "${lead.city || ''}" | State: "${lead.state || ''}"`);
-      console.log(`    About: "${lead.sourceDetails.about}" | Address: "${lead.address || ''}"`);
+      console.log(`    About (Specialisation): "${lead.sourceDetails.about || ''}" | Address: "${lead.address || ''}"`);
     });
     console.log("--------------------------------------\n");
 
@@ -898,7 +931,7 @@ async function main() {
       console.log("--- SAMPLE VALID RECORDS (LAST 5) ---");
       validLeads.slice(-5).forEach((lead, idx) => {
         console.log(`[${validLeads.length - 5 + idx + 1}] Name: "${lead.name}" | Phone: "${lead.phone}" | City: "${lead.city || ''}" | State: "${lead.state || ''}"`);
-        console.log(`    About: "${lead.sourceDetails.about}" | Address: "${lead.address || ''}"`);
+        console.log(`    About (Specialisation): "${lead.sourceDetails.about || ''}" | Address: "${lead.address || ''}"`);
       });
       console.log("-------------------------------------\n");
     }
@@ -913,20 +946,45 @@ async function main() {
   }
 
   if (duplicateRecords.length > 0) {
-    console.log("--- SAMPLE DUPLICATE RECORDS (UP TO 5) ---");
+    console.log("--- SAMPLE BATCH DUPLICATE RECORDS (UP TO 5) ---");
     duplicateRecords.slice(0, 5).forEach((dup, idx) => {
       console.log(`[${idx + 1}] Raw Data: ${JSON.stringify(dup.record)}`);
     });
-    console.log("------------------------------------------\n");
+    console.log("------------------------------------------------\n");
+  }
+
+  if (dbDuplicateRecords.length > 0) {
+    console.log("--- SAMPLE DB DUPLICATE RECORDS (UP TO 5) ---");
+    dbDuplicateRecords.slice(0, 5).forEach((dup, idx) => {
+      console.log(`[${idx + 1}] Raw Data: ${JSON.stringify(dup.record)}`);
+    });
+    console.log("---------------------------------------------\n");
   }
 
   // 4. DB Import (Commit Mode)
   if (isCommit) {
-    console.log("Connecting to Database...");
-    await dbConnect();
-    console.log("Connected successfully.");
+    // Perform database cleanup of useless/wrong numbers
+    console.log("Cleaning up existing invalid phone numbers in target collection...");
+    const allDBLeads = await LeadModel.find({}, { _id: 1, phone: 1 }).lean();
+    const idsToDelete: mongoose.Types.ObjectId[] = [];
+    
+    for (const lead of allDBLeads) {
+      const cleaned = cleanPhone(lead.phone);
+      const issue = getPhoneIssue(cleaned);
+      if (issue) {
+        idsToDelete.push(lead._id);
+      }
+    }
+    
+    let deletedCount = 0;
+    if (idsToDelete.length > 0) {
+      const deleteResult = await LeadModel.deleteMany({ _id: { $in: idsToDelete } });
+      deletedCount = deleteResult.deletedCount || idsToDelete.length;
+      console.log(`Deleted ${deletedCount} existing leads with invalid/useless numbers from database.`);
+    } else {
+      console.log("No existing invalid leads found in database.");
+    }
 
-    const LeadModel = getLeadModel(collectionType);
     console.log(`Inserting ${validLeads.length} leads into target collection [${collectionType}]...`);
 
     let insertedCount = 0;
@@ -946,15 +1004,43 @@ async function main() {
       totalRecords,
       validRecords: validLeads.length,
       invalidRecords: invalidRecords.length,
-      duplicateRecords: duplicateRecords.length,
+      duplicateRecords: duplicateRecords.length + dbDuplicateRecords.length,
       insertedRecords: insertedCount,
       targetCollection: collectionType
     });
     console.log("Import audit log saved successfully.");
+
+    const finalDBCount = await LeadModel.countDocuments({});
+    console.log(`\n=================== POST-IMPORT SUMMARY ===================`);
+    console.log(`Leads deleted (useless/wrong numbers):  ${deletedCount}`);
+    console.log(`Leads imported:                         ${insertedCount}`);
+    console.log(`Total cleaned leads in database:        ${finalDBCount}`);
+    console.log(`============================================================\n`);
   } else {
     console.log("RUNNING IN DRY-RUN MODE.");
     console.log("To commit records to the database, run the command with the --commit flag.");
     console.log(`Example: npx tsx src/scripts/import_leads.ts ${fileArg} ${collectionType} --commit`);
+
+    // Run dry-run cleanup calculation
+    let projectedDeletedCount = 0;
+    const allDBLeads = await LeadModel.find({}, { phone: 1 }).lean();
+    for (const lead of allDBLeads) {
+      const cleaned = cleanPhone(lead.phone);
+      const issue = getPhoneIssue(cleaned);
+      if (issue) {
+        projectedDeletedCount++;
+      }
+    }
+    const currentDBCount = allDBLeads.length;
+    console.log(`\n=================== DRY-RUN SUMMARY ===================`);
+    console.log(`Current leads in database:              ${currentDBCount}`);
+    console.log(`Projected leads to import:              ${validLeads.length}`);
+    console.log(`Projected database duplicates skipped:  ${dbDuplicateRecords.length}`);
+    console.log(`Projected batch duplicates skipped:     ${duplicateRecords.length}`);
+    console.log(`Projected invalid records skipped:      ${invalidRecords.length}`);
+    console.log(`Projected leads to delete (useless/wrong): ${projectedDeletedCount}`);
+    console.log(`Projected final cleaned leads in database: ${currentDBCount - projectedDeletedCount + validLeads.length}`);
+    console.log(`========================================================\n`);
   }
 
   process.exit(0);

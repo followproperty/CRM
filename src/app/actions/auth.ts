@@ -2,8 +2,12 @@
 
 import dbConnect from "@/lib/db";
 import User from "@/models/user.model";
-import { createSession } from "@/lib/session";
+import { createSession, getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import LoginSession from "@/models/login-session.model";
+import { SessionStatus } from "@/types/login-session";
+import { getClientRequestMetadata } from "@/lib/request";
 
 export interface LoginResult {
   success: boolean;
@@ -37,12 +41,37 @@ export async function login(formData: FormData): Promise<LoginResult> {
       return { success: false, error: "Invalid email or password." };
     }
 
-    // Set up the session payload
+    // Generate unique sessionId
+    const sessionId = new mongoose.Types.ObjectId().toString();
+
+    // Create LoginSession record (fail-safe to not block login on audit failures)
+    try {
+      const { cleanOldUserSessions } = await import("@/lib/session-expiry");
+      await cleanOldUserSessions(user._id.toString());
+
+      const metadata = await getClientRequestMetadata();
+      await LoginSession.create({
+        userId: user._id.toString(),
+        sessionId,
+        loginAt: new Date(),
+        ipAddress: metadata.ip,
+        userAgent: metadata.userAgent,
+        browser: metadata.browser,
+        os: metadata.os,
+        device: metadata.device,
+        status: SessionStatus.ACTIVE,
+      });
+    } catch (sessionError) {
+      console.error("Failed to create login session record:", sessionError);
+    }
+
+    // Set up the session payload including sessionId
     const payload = {
       userId: user._id.toString(),
       email: user.email,
       role: user.role,
       name: user.name,
+      sessionId,
     };
 
     await createSession(payload);
@@ -72,6 +101,22 @@ export async function login(formData: FormData): Promise<LoginResult> {
 }
 
 export async function logout(): Promise<void> {
+  try {
+    const session = await getSession();
+    if (session?.sessionId) {
+      await dbConnect();
+      await LoginSession.findOneAndUpdate(
+        { sessionId: session.sessionId },
+        {
+          logoutAt: new Date(),
+          status: SessionStatus.LOGGED_OUT,
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Logout session tracking error:", error);
+  }
+
   const { destroySession } = await import("@/lib/session");
   await destroySession();
 }

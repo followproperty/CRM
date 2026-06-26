@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import type { Types } from "mongoose";
 
 /**
  * Activity Action types tracking operations on a Lead

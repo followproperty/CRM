@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserRole } from "@/types/user";
+import { logout } from "@/app/actions/auth";
 
 interface SidebarProps {
   role: UserRole;
@@ -96,6 +97,7 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
       { title: "WhatsApp Follow-ups", href: "/super-admin/whatsapp", icon: <Icons.Chat /> },
       { title: "Caller Performance", href: "/super-admin/performance", icon: <Icons.Analytics /> },
       { title: "User Management", href: "/super-admin/users", icon: <Icons.Users /> },
+      { title: "Session Audit", href: "/super-admin/sessions", icon: <Icons.Logs /> },
     ],
     [UserRole.ADMIN]: [
       { title: "Overview", href: "/admin", icon: <Icons.Dashboard /> },
@@ -212,7 +214,6 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
         )}
         <button
           onClick={async () => {
-            const { logout } = await import("@/app/actions/auth");
             await logout();
             window.location.href = "/login";
           }}

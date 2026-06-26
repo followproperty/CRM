@@ -2,7 +2,7 @@
 
 import dbConnect from "@/lib/db";
 import Note from "@/models/note.model";
-import Activity from "@/models/activity.model";
+import { createAuditedActivity } from "@/lib/activity-audit";
 import { getSession } from "@/lib/session";
 import { ActivityAction } from "@/types/activity";
 import { revalidatePath } from "next/cache";
@@ -58,7 +58,7 @@ export async function addLeadNoteAction(leadId: string, noteText: string): Promi
     });
 
     // Create Activity entry for the added note
-    await Activity.create({
+    await createAuditedActivity({
       leadId,
       userId: session.userId,
       action: ActivityAction.NOTE_ADDED,
