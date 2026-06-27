@@ -51,7 +51,14 @@ export default async function SessionAuditPage(props: PageProps) {
   const searchParams = await props.searchParams;
   const filterEmployee = searchParams.employee || "";
   const filterStatus = searchParams.status || "";
-  const filterDate = searchParams.date || "";
+  
+  // Format today's date in IST (YYYY-MM-DD)
+  const now = new Date();
+  const istTime = new Date(now.getTime() + (5 * 60 + 30) * 60 * 1000);
+  const todayISTStr = istTime.toISOString().split("T")[0]; // YYYY-MM-DD
+
+  // Default to today if date is not specified (undefined or empty)
+  const filterDate = searchParams.date === undefined ? todayISTStr : (searchParams.date || "");
 
   let employees: Array<{ _id: string; name: string }> = [];
   let sessions: PopulatedLoginSession[] = [];

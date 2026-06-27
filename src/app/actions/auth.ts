@@ -42,27 +42,41 @@ export async function login(formData: FormData): Promise<LoginResult> {
     }
 
     // Generate unique sessionId
-    const sessionId = new mongoose.Types.ObjectId().toString();
+    let sessionId = new mongoose.Types.ObjectId().toString();
 
     // Create LoginSession record (fail-safe to not block login on audit failures)
     try {
-      const { cleanOldUserSessions } = await import("@/lib/session-expiry");
-      await cleanOldUserSessions(user._id.toString());
-
       const metadata = await getClientRequestMetadata();
-      await LoginSession.create({
+      
+      // Check for a recent active session with the same IP and user agent to prevent duplicates
+      const existingActiveSession = await LoginSession.findOne({
         userId: user._id.toString(),
-        sessionId,
-        loginAt: new Date(),
+        status: SessionStatus.ACTIVE,
         ipAddress: metadata.ip,
         userAgent: metadata.userAgent,
-        browser: metadata.browser,
-        os: metadata.os,
-        device: metadata.device,
-        status: SessionStatus.ACTIVE,
+        loginAt: { $gte: new Date(Date.now() - 15000) } // within last 15 seconds
       });
+
+      if (existingActiveSession) {
+        sessionId = existingActiveSession.sessionId;
+      } else {
+        const { cleanOldUserSessions } = await import("@/lib/session-expiry");
+        await cleanOldUserSessions(user._id.toString());
+
+        await LoginSession.create({
+          userId: user._id.toString(),
+          sessionId,
+          loginAt: new Date(),
+          ipAddress: metadata.ip,
+          userAgent: metadata.userAgent,
+          browser: metadata.browser,
+          os: metadata.os,
+          device: metadata.device,
+          status: SessionStatus.ACTIVE,
+        });
+      }
     } catch (sessionError) {
-      console.error("Failed to create login session record:", sessionError);
+      console.error("Failed to create/reuse login session record:", sessionError);
     }
 
     // Set up the session payload including sessionId
