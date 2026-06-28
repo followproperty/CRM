@@ -81,6 +81,25 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       };
     });
 
+  const triggerDialer = (phoneNumber: string) => {
+    if (typeof window === "undefined") return;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = `tel:${phoneNumber}`;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 300);
+  };
+
+  const handleInitiateCall = (lead: ILead, phoneNumber: string) => {
+    triggerDialer(phoneNumber);
+    setTimeout(() => {
+      setActiveOutcomeLead(lead);
+      setOutcomeNote("");
+    }, 100);
+  };
+
   // Action execution helpers
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
@@ -263,13 +282,11 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                         </button>
                         <a
                           href={`tel:${contactNumber}`}
-                          onClick={() => {
-                            setTimeout(() => {
-                              setActiveOutcomeLead(lead);
-                              setOutcomeNote("");
-                            }, 100);
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleInitiateCall(lead, contactNumber);
                           }}
-                          className="text-sm text-slate-550 font-mono font-medium mt-0.5 hover:text-indigo-600 inline-block"
+                          className="text-sm text-slate-555 font-mono font-medium mt-0.5 hover:text-indigo-600 inline-block"
                         >
                           {contactNumber}
                         </a>
@@ -308,11 +325,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                           {/* Prominent green CALL button */}
                           <a
                             href={`tel:${contactNumber}`}
-                            onClick={() => {
-                              setTimeout(() => {
-                                setActiveOutcomeLead(lead);
-                                setOutcomeNote("");
-                              }, 100);
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleInitiateCall(lead, contactNumber);
                             }}
                             className="flex items-center justify-center gap-1.5 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.99] touch-manipulation"
                           >
@@ -355,11 +370,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                     <span className="font-mono text-indigo-650 font-bold">{reminder.time}</span>
                     <a
                       href={`tel:${reminder.phone}`}
-                      onClick={() => {
-                        setTimeout(() => {
-                          setActiveOutcomeLead(reminder.leadObject);
-                          setOutcomeNote("");
-                        }, 100);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleInitiateCall(reminder.leadObject, reminder.phone);
                       }}
                       className="p-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200"
                     >

@@ -78,6 +78,25 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     router.replace(`${window.location.pathname}?${params.toString()}`);
   };
 
+  const triggerDialer = (phoneNumber: string) => {
+    if (typeof window === "undefined") return;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = `tel:${phoneNumber}`;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 300);
+  };
+
+  const handleInitiateCall = (lead: ILead, phoneNumber: string) => {
+    triggerDialer(phoneNumber);
+    setTimeout(() => {
+      setActiveOutcomeLead(lead);
+      setOutcomeNote("");
+    }, 100);
+  };
+
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
     const leadId = lead._id ? lead._id.toString() : "";
 
@@ -230,11 +249,9 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       <td className="px-6 py-4 text-slate-655 font-mono">
                         <a
                           href={`tel:${contactNumber}`}
-                          onClick={() => {
-                            setTimeout(() => {
-                              setActiveOutcomeLead(lead);
-                              setOutcomeNote("");
-                            }, 100);
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleInitiateCall(lead, contactNumber);
                           }}
                           className="hover:text-indigo-600 transition-colors font-medium"
                         >
@@ -255,11 +272,9 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                           <div className="flex justify-end gap-2">
                             <a
                               href={`tel:${contactNumber}`}
-                              onClick={() => {
-                                setTimeout(() => {
-                                  setActiveOutcomeLead(lead);
-                                  setOutcomeNote("");
-                                }, 100);
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleInitiateCall(lead, contactNumber);
                               }}
                               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all active:scale-[0.98] inline-flex items-center gap-1 shadow-xs"
                             >
@@ -319,11 +334,9 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                     </button>
                     <a
                       href={`tel:${contactNumber}`}
-                      onClick={() => {
-                        setTimeout(() => {
-                          setActiveOutcomeLead(lead);
-                          setOutcomeNote("");
-                        }, 100);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleInitiateCall(lead, contactNumber);
                       }}
                       className="text-sm text-slate-500 font-mono font-medium mt-0.5 hover:text-indigo-650 inline-block"
                     >
@@ -350,11 +363,9 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {/* Prominent green Call button */}
                       <a
                         href={`tel:${contactNumber}`}
-                        onClick={() => {
-                          setTimeout(() => {
-                            setActiveOutcomeLead(lead);
-                            setOutcomeNote("");
-                          }, 100);
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleInitiateCall(lead, contactNumber);
                         }}
                         className="flex items-center justify-center gap-1.5 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.99] touch-manipulation"
                       >
