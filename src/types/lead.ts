@@ -119,6 +119,12 @@ export interface ILead {
   createdAt?: Date;
   updatedAt?: Date;
   collectionType?: string;
+  budgetValue?: string;
+  budgetUnit?: string;
+  configuration?: string;
+  possessionTimeline?: string;
+  maybeLaterTimeframe?: string;
+  maybeLaterDate?: Date | string;
 }
 
 /**

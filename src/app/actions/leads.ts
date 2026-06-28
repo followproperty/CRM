@@ -111,7 +111,17 @@ export async function updateLeadStatusAction(
   status: LeadStatus,
   followUpDateStr?: string | null,
   noteText?: string | null,
-  collectionType?: string
+  collectionType?: string,
+  extraDetails?: {
+    projectName?: string;
+    city?: string;
+    budgetValue?: string;
+    budgetUnit?: string;
+    configuration?: string;
+    possessionTimeline?: string;
+    maybeLaterTimeframe?: string;
+    maybeLaterDate?: string;
+  }
 ): Promise<UpdateLeadStatusResult> {
   const session = await getSession();
   if (!session) {
@@ -172,6 +182,27 @@ export async function updateLeadStatusAction(
       activityAction = ActivityAction.MAYBE_LATER;
     }
 
+    // Save extraDetails fields on the lead document
+    if (status === LeadStatus.INTERESTED && extraDetails) {
+      if (extraDetails.projectName) lead.projectName = extraDetails.projectName;
+      if (extraDetails.city) lead.city = extraDetails.city;
+      if (extraDetails.budgetValue) lead.budgetValue = extraDetails.budgetValue;
+      if (extraDetails.budgetUnit) lead.budgetUnit = extraDetails.budgetUnit;
+      if (extraDetails.configuration) lead.configuration = extraDetails.configuration;
+      if (extraDetails.possessionTimeline) lead.possessionTimeline = extraDetails.possessionTimeline;
+      
+      activityNote = `Interested details added - Project: ${extraDetails.projectName || "N/A"}, Budget: ${extraDetails.budgetValue || "N/A"} ${extraDetails.budgetUnit || ""}, Config: ${extraDetails.configuration || "N/A"}`;
+    } else if (status === LeadStatus.MAYBE_LATER && extraDetails) {
+      if (extraDetails.maybeLaterTimeframe) lead.maybeLaterTimeframe = extraDetails.maybeLaterTimeframe;
+      if (extraDetails.maybeLaterDate) {
+        const parsedDate = new Date(extraDetails.maybeLaterDate);
+        if (!isNaN(parsedDate.getTime())) {
+          lead.maybeLaterDate = parsedDate;
+        }
+      }
+      activityNote = `Maybe Later details added - Timeframe: ${extraDetails.maybeLaterTimeframe || "N/A"}`;
+    }
+
     // Save Note historically if noteText is provided
     if (noteText && noteText.trim()) {
       await Note.create({
@@ -200,6 +231,7 @@ export async function updateLeadStatusAction(
         updatedBy: session.userId,
         followUpDate: followUpDateStr || null,
         noteText: noteText || null,
+        extraDetails: extraDetails || null,
       },
     });
 

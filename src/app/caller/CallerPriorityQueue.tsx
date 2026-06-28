@@ -32,6 +32,20 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const [siteVisitDate, setSiteVisitDate] = useState("");
   const [siteVisitNotes, setSiteVisitNotes] = useState("");
 
+  // Sub-form details state
+  const [selectedSubStatus, setSelectedSubStatus] = useState<LeadStatus | null>(null);
+  const [interestedProject, setInterestedProject] = useState("");
+  const [interestedCity, setInterestedCity] = useState("");
+  const [interestedBudgetValue, setInterestedBudgetValue] = useState("");
+  const [interestedBudgetUnit, setInterestedBudgetUnit] = useState("Lakh");
+  const [interestedConfig, setInterestedConfig] = useState("");
+  const [interestedTimeline, setInterestedTimeline] = useState("");
+  const [interestedNote, setInterestedNote] = useState("");
+
+  const [maybeLaterTimeframe, setMaybeLaterTimeframe] = useState("");
+  const [maybeLaterDate, setMaybeLaterDate] = useState("");
+  const [maybeLaterNote, setMaybeLaterNote] = useState("");
+
   const showMessage = (text: string, isError = false) => {
     setMessage({ text, isError });
     setTimeout(() => setMessage(null), 4000);
@@ -182,6 +196,52 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
         showMessage("Site visit scheduled successfully.");
       } else {
         showMessage(result.error || "Failed to schedule site visit.", true);
+      }
+    });
+  };
+
+  const closeOutcomeModal = () => {
+    setActiveOutcomeLead(null);
+    setOutcomeNote("");
+    setSelectedSubStatus(null);
+    setInterestedProject("");
+    setInterestedCity("");
+    setInterestedBudgetValue("");
+    setInterestedBudgetUnit("Lakh");
+    setInterestedConfig("");
+    setInterestedTimeline("");
+    setInterestedNote("");
+    setMaybeLaterTimeframe("");
+    setMaybeLaterDate("");
+    setMaybeLaterNote("");
+  };
+
+  const handleDetailedStatusUpdate = (e: React.FormEvent, lead: ILead, status: LeadStatus) => {
+    e.preventDefault();
+    const leadId = lead._id ? lead._id.toString() : "";
+
+    const extraDetails = status === LeadStatus.INTERESTED ? {
+      projectName: interestedProject,
+      city: interestedCity,
+      budgetValue: interestedBudgetValue,
+      budgetUnit: interestedBudgetUnit,
+      configuration: interestedConfig,
+      possessionTimeline: interestedTimeline,
+    } : status === LeadStatus.MAYBE_LATER ? {
+      maybeLaterTimeframe,
+      maybeLaterDate,
+    } : undefined;
+
+    const noteText = status === LeadStatus.INTERESTED ? interestedNote : status === LeadStatus.MAYBE_LATER ? maybeLaterNote : outcomeNote;
+
+    closeOutcomeModal();
+
+    startTransition(async () => {
+      const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
+      if (result.success) {
+        showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
+      } else {
+        showMessage(result.error || "Failed to update lead status.", true);
       }
     });
   };
@@ -399,21 +459,102 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
       {/* Outcome Selection Modal/Drawer */}
       {activeOutcomeLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-600/40 backdrop-blur-xs animate-fade-in" onClick={() => setActiveOutcomeLead(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-600/40 backdrop-blur-xs animate-fade-in" onClick={closeOutcomeModal}>
           <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/70">
               <div>
                 <h3 className="text-base font-bold text-slate-800">Log Outcome</h3>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5">Lead: {activeOutcomeLead.name}</p>
               </div>
-              <button onClick={() => setActiveOutcomeLead(null)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 cursor-pointer">
+              <button onClick={closeOutcomeModal} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 cursor-pointer">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            {selectedSubStatus === LeadStatus.INTERESTED ? (
+              <form onSubmit={(e) => handleDetailedStatusUpdate(e, activeOutcomeLead, LeadStatus.INTERESTED)} className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interested Details Form</span>
+                  <button type="button" onClick={() => setSelectedSubStatus(null)} className="text-xs text-indigo-600 hover:text-indigo-850 font-bold transition-all">← Back to List</button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Remark / Note (Required) <span className="text-red-500">*</span></label>
+                  <textarea required rows={3} placeholder="Please write something which can help admin to get some context" value={interestedNote} onChange={(e) => setInterestedNote(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all placeholder-slate-400 resize-none" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Project Interested (Optional)</label>
+                  <input type="text" placeholder="e.g. DLF Heights..." value={interestedProject} onChange={(e) => setInterestedProject(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">City (Optional)</label>
+                  <input type="text" placeholder="e.g. Gurugram..." value={interestedCity} onChange={(e) => setInterestedCity(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Budget (Optional)</label>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="e.g. 80" value={interestedBudgetValue} onChange={(e) => setInterestedBudgetValue(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all" />
+                    <select value={interestedBudgetUnit} onChange={(e) => setInterestedBudgetUnit(e.target.value)} className="bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all">
+                      <option value="Lakh">Lakh</option>
+                      <option value="Cr">Cr</option>
+                      <option value="Rupees">Rupees</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Config (Optional)</label>
+                    <input type="text" placeholder="e.g. 2 BHK, Plot" value={interestedConfig} onChange={(e) => setInterestedConfig(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Timeline (Optional)</label>
+                    <select value={interestedTimeline} onChange={(e) => setInterestedTimeline(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all">
+                      <option value="">Select Timeline</option>
+                      <option value="Immediate">Immediate</option>
+                      <option value="Ready to Move">Ready to Move</option>
+                      <option value="6 Months">6 Months</option>
+                      <option value="1 Year">1 Year</option>
+                      <option value="Under Construction">Under Construction</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={closeOutcomeModal} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">Cancel</button>
+                  <button type="submit" disabled={isPending || !interestedNote.trim()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold">{isPending ? "Saving..." : "Submit Log"}</button>
+                </div>
+              </form>
+            ) : selectedSubStatus === LeadStatus.MAYBE_LATER ? (
+              <form onSubmit={(e) => handleDetailedStatusUpdate(e, activeOutcomeLead, LeadStatus.MAYBE_LATER)} className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Maybe Later Details Form</span>
+                  <button type="button" onClick={() => setSelectedSubStatus(null)} className="text-xs text-indigo-600 hover:text-indigo-850 font-bold transition-all">← Back to List</button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Timeframe (Optional)</label>
+                  <select value={maybeLaterTimeframe} onChange={(e) => setMaybeLaterTimeframe(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all">
+                    <option value="">Select Timeframe</option>
+                    <option value="Next month">Next month</option>
+                    <option value="In 3 months">In 3 months</option>
+                    <option value="In 6 months">In 6 months</option>
+                    <option value="Next year">Next year</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Future Date (Optional)</label>
+                  <input type="date" min={new Date().toISOString().split("T")[0]} value={maybeLaterDate} onChange={(e) => setMaybeLaterDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider">Remark / Note (Optional)</label>
+                  <textarea rows={2} placeholder="Add a note..." value={maybeLaterNote} onChange={(e) => setMaybeLaterNote(e.target.value)} className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-850 focus:outline-none transition-all placeholder-slate-400 resize-none" />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={closeOutcomeModal} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">Cancel</button>
+                  <button type="submit" disabled={isPending} className="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-lg text-xs font-bold">{isPending ? "Saving..." : "Submit Log"}</button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-5 space-y-4">
               {/* Optional Outcome Note input */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="priority-outcome-note" className="text-[10px] font-bold text-slate-550 uppercase tracking-wider">Remark / Note (Optional)</label>
@@ -430,7 +571,8 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
               {/* Large Touch-friendly grid outcomes buttons */}
               <div className="grid grid-cols-1 gap-2">
                 <button
-                  onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.INTERESTED)}
+                  type="button"
+                  onClick={() => setSelectedSubStatus(LeadStatus.INTERESTED)}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold text-sm border border-emerald-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -492,7 +634,8 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 </button>
 
                 <button
-                  onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.MAYBE_LATER)}
+                  type="button"
+                  onClick={() => setSelectedSubStatus(LeadStatus.MAYBE_LATER)}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 rounded-xl font-bold text-sm border border-fuchsia-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -519,9 +662,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
+    )}
 
       {/* Callback Scheduling Modal (Call Later Dialog) */}
       {callbackLead && (

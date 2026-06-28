@@ -29,6 +29,14 @@ interface DBLead {
   } | null;
   source: string;
   collectionType?: string;
+  projectName?: string;
+  city?: string;
+  budgetValue?: string;
+  budgetUnit?: string;
+  configuration?: string;
+  possessionTimeline?: string;
+  maybeLaterTimeframe?: string;
+  maybeLaterDate?: Date;
 }
 
 export default async function AdminFollowupsPage({ searchParams }: PageProps) {
@@ -175,6 +183,14 @@ export default async function AdminFollowupsPage({ searchParams }: PageProps) {
       : null,
     source: l.source,
     collectionType: l.collectionType,
+    projectName: l.projectName,
+    city: l.city,
+    budgetValue: l.budgetValue,
+    budgetUnit: l.budgetUnit,
+    configuration: l.configuration,
+    possessionTimeline: l.possessionTimeline,
+    maybeLaterTimeframe: l.maybeLaterTimeframe,
+    maybeLaterDate: l.maybeLaterDate ? new Date(l.maybeLaterDate).toISOString() : undefined,
   });
 
   return (

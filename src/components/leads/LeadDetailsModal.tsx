@@ -220,6 +220,67 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
             </div>
           )}
 
+          {/* Section 1.5: Status Details */}
+          {(lead.status === LeadStatus.INTERESTED || lead.status === LeadStatus.MAYBE_LATER || lead.budgetValue || lead.maybeLaterTimeframe) && (
+            <div className={`p-4 rounded-xl border ${isCaller ? "bg-emerald-50/20 border-emerald-100" : "bg-slate-50 border-slate-200"} space-y-4`}>
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${isCaller ? "text-emerald-800" : "text-purple-700"}`}>
+                {lead.status === LeadStatus.INTERESTED ? "Interested Details" : "Maybe Later Details"}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                {lead.status === LeadStatus.INTERESTED && (
+                  <>
+                    {lead.projectName && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Project Interested</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.projectName}</p>
+                      </div>
+                    )}
+                    {lead.city && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">City</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.city}</p>
+                      </div>
+                    )}
+                    {lead.budgetValue && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Budget</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.budgetValue} {lead.budgetUnit || "Lakh"}</p>
+                      </div>
+                    )}
+                    {lead.configuration && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Config / Size</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.configuration}</p>
+                      </div>
+                    )}
+                    {lead.possessionTimeline && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Timeline</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.possessionTimeline}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+                {lead.status === LeadStatus.MAYBE_LATER && (
+                  <>
+                    {lead.maybeLaterTimeframe && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Timeframe</label>
+                        <p className="text-slate-800 font-semibold mt-0.5">{lead.maybeLaterTimeframe}</p>
+                      </div>
+                    )}
+                    {lead.maybeLaterDate && (
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Future Call Date</label>
+                        <p className="text-slate-850 font-mono font-semibold mt-0.5">{formatToIST(lead.maybeLaterDate).split(" ")[0]}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Section 2: Remarks Timeline & Addition */}
           <div className="space-y-4">
             <h3 className={`text-xs font-bold uppercase tracking-wider ${isCaller ? "text-emerald-800" : "text-purple-700"}`}>Historical Remarks Timeline</h3>

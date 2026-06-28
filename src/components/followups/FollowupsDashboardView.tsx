@@ -21,6 +21,13 @@ interface PopulatedLead {
   city?: string;
   state?: string;
   collectionType?: string;
+  projectName?: string;
+  budgetValue?: string;
+  budgetUnit?: string;
+  configuration?: string;
+  possessionTimeline?: string;
+  maybeLaterTimeframe?: string;
+  maybeLaterDate?: string | Date;
 }
 
 interface FollowupsDashboardViewProps {
@@ -251,17 +258,30 @@ export default function FollowupsDashboardView({
               ) : (
                 activeLeads.map((lead) => (
                   <tr key={lead._id} className="hover:bg-slate-50/50 transition-colors">
-                    {/* Name (Clickable trigger for LeadDetailsModal) */}
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => {
-                          setSelectedLeadId(lead._id);
-                          setSelectedLead(lead as unknown as ILead);
-                        }}
-                        className="font-semibold text-slate-800 hover:text-indigo-650 hover:underline text-left transition-colors cursor-pointer"
-                      >
-                        {lead.name}
-                      </button>
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => {
+                            setSelectedLeadId(lead._id);
+                            setSelectedLead(lead as unknown as ILead);
+                          }}
+                          className="font-semibold text-slate-800 hover:text-indigo-650 hover:underline text-left transition-colors cursor-pointer"
+                        >
+                          {lead.name}
+                        </button>
+                        {lead.status === LeadStatus.INTERESTED && (lead.projectName || lead.budgetValue) && (
+                          <span className="text-[10px] text-emerald-700 font-medium mt-0.5">
+                            {lead.projectName && `Proj: ${lead.projectName}`}
+                            {lead.budgetValue && ` • Budget: ${lead.budgetValue} ${lead.budgetUnit || "Lakh"}`}
+                            {lead.configuration && ` • ${lead.configuration}`}
+                          </span>
+                        )}
+                        {lead.status === LeadStatus.MAYBE_LATER && lead.maybeLaterTimeframe && (
+                          <span className="text-[10px] text-fuchsia-700 font-medium mt-0.5">
+                            Timeframe: {lead.maybeLaterTimeframe}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {/* Phone */}
                     <td className="px-6 py-4 font-mono text-slate-600">
@@ -328,16 +348,29 @@ export default function FollowupsDashboardView({
               return (
                 <div key={lead._id} className="p-4 space-y-3">
                   <div className="flex justify-between items-start gap-2">
-                    {/* Lead Name (clickable modal trigger) */}
-                    <button
-                      onClick={() => {
-                        setSelectedLeadId(lead._id);
-                        setSelectedLead(lead as unknown as ILead);
-                      }}
-                      className="font-bold text-slate-900 hover:text-indigo-650 hover:underline text-left text-sm transition-colors cursor-pointer"
-                    >
-                      {lead.name}
-                    </button>
+                    <div className="flex flex-col min-w-0">
+                      <button
+                        onClick={() => {
+                          setSelectedLeadId(lead._id);
+                          setSelectedLead(lead as unknown as ILead);
+                        }}
+                        className="font-bold text-slate-900 hover:text-indigo-650 hover:underline text-left text-sm transition-colors cursor-pointer truncate"
+                      >
+                        {lead.name}
+                      </button>
+                      {lead.status === LeadStatus.INTERESTED && (lead.projectName || lead.budgetValue) && (
+                        <span className="text-[9px] text-emerald-700 font-medium mt-0.5">
+                          {lead.projectName && `Proj: ${lead.projectName}`}
+                          {lead.budgetValue && ` • Budget: ${lead.budgetValue} ${lead.budgetUnit || "Lakh"}`}
+                          {lead.configuration && ` • ${lead.configuration}`}
+                        </span>
+                      )}
+                      {lead.status === LeadStatus.MAYBE_LATER && lead.maybeLaterTimeframe && (
+                        <span className="text-[9px] text-fuchsia-700 font-medium mt-0.5">
+                          Timeframe: {lead.maybeLaterTimeframe}
+                        </span>
+                      )}
+                    </div>
                     {/* Status */}
                     <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${getStatusStyles(lead.status)}`}>
                       {LEAD_STATUS_LABELS[lead.status] || lead.status}

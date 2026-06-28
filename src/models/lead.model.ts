@@ -224,6 +224,35 @@ const LeadSchema = new Schema<ILeadDocument>(
       ref: "User",
       required: false,
     },
+    budgetValue: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    budgetUnit: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    configuration: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    possessionTimeline: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    maybeLaterTimeframe: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    maybeLaterDate: {
+      type: Date,
+      required: false,
+    },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt
