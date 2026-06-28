@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateLeadStatusAction, scheduleSiteVisitAction, requestWhatsAppFollowupAction } from "@/app/actions/leads";
 import { LeadStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
@@ -81,6 +81,76 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const [maybeLaterDate, setMaybeLaterDate] = useState("");
   const [maybeLaterNote, setMaybeLaterNote] = useState("");
 
+  const [callState, setCallState] = useState<{ lead: ILead; startTime: number } | null>(null);
+
+  // Hydrate state from sessionStorage on load
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem("active_call");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const elapsed = Date.now() - parsed.startTime;
+        if (elapsed < 15000) {
+          setCallState(parsed);
+        } else {
+          sessionStorage.removeItem("active_call");
+        }
+      } catch {
+        sessionStorage.removeItem("active_call");
+      }
+    }
+  }, []);
+
+  // Manage countdown timer and auto-opening modal
+  useEffect(() => {
+    if (!callState) return;
+    const elapsed = Date.now() - callState.startTime;
+    const remaining = 15000 - elapsed;
+    if (remaining <= 0) {
+      // Auto-open modal when timer finishes
+      setActiveOutcomeLead((curr) => curr || callState.lead);
+      setOutcomeNote("");
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      // Force re-render to update disabled button state
+      setCallState((current) => current ? { ...current } : null);
+      setActiveOutcomeLead((curr) => curr || callState.lead);
+      setOutcomeNote("");
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("active_call");
+      }
+    }, remaining);
+
+    return () => clearTimeout(timer);
+  }, [callState]);
+
+  const getCallStatus = (leadId: string) => {
+    if (callState) {
+      const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
+      if (stateLeadId === leadId) {
+        const elapsed = Date.now() - callState.startTime;
+        return elapsed >= 15000 ? "verified" : "calling";
+      }
+    }
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("active_call");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
+          if (parsedLeadId === leadId) {
+            const elapsed = Date.now() - parsed.startTime;
+            return elapsed >= 15000 ? "verified" : "calling";
+          }
+        } catch {}
+      }
+    }
+    return "idle";
+  };
+
   const showMessage = (text: string, isError = false) => {
     setMessage({ text, isError });
     setTimeout(() => setMessage(null), 4000);
@@ -103,12 +173,14 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     }, 300);
   };
 
-  const handleInitiateCall = (lead: ILead, phoneNumber: string) => {
-    triggerDialer(phoneNumber);
-    setTimeout(() => {
-      setActiveOutcomeLead(lead);
-      setOutcomeNote("");
-    }, 100);
+  const handleInitiateCall = (lead: ILead) => {
+    const startTime = Date.now();
+    const newState = { lead, startTime };
+    setCallState(newState);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("active_call", JSON.stringify(newState));
+      triggerDialer(lead.primaryPhone || lead.phone);
+    }
   };
 
   const handleQuickStatusUpdate = (lead: ILead, status: LeadStatus) => {
@@ -203,6 +275,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const closeOutcomeModal = () => {
     setActiveOutcomeLead(null);
     setOutcomeNote("");
+    setCallState(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("active_call");
+    }
     setSelectedSubStatus(null);
     setInterestedProject("");
     setInterestedCity("");
@@ -309,10 +385,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {/* Contact */}
                       <td className="px-6 py-4 text-slate-655 font-mono">
                         <a
-                          href={`tel:${contactNumber}`}
+                          href="javascript:void(0)"
                           onClick={(e) => {
                             e.preventDefault();
-                            handleInitiateCall(lead, contactNumber);
+                            handleInitiateCall(lead);
                           }}
                           className="hover:text-indigo-600 transition-colors font-medium"
                         >
@@ -332,21 +408,22 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                         ) : (
                           <div className="flex justify-end gap-2">
                             <a
-                              href={`tel:${contactNumber}`}
+                              href="javascript:void(0)"
                               onClick={(e) => {
                                 e.preventDefault();
-                                handleInitiateCall(lead, contactNumber);
+                                handleInitiateCall(lead);
                               }}
                               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all active:scale-[0.98] inline-flex items-center gap-1 shadow-xs"
                             >
                               Call
                             </a>
                             <button
+                              disabled={getCallStatus(leadId) !== "verified"}
                               onClick={() => {
                                 setActiveOutcomeLead(lead);
                                 setOutcomeNote("");
                               }}
-                              className="px-3.5 py-1.5 border border-slate-250 bg-white hover:bg-slate-50 text-slate-705 rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs"
+                              className="px-3.5 py-1.5 border border-slate-250 bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-slate-705 rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs"
                             >
                               Log Outcome
                             </button>
@@ -394,12 +471,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {lead.name}
                     </button>
                     <a
-                      href={`tel:${contactNumber}`}
+                      href="javascript:void(0)"
                       onClick={(e) => {
                         e.preventDefault();
-                        handleInitiateCall(lead, contactNumber);
+                        handleInitiateCall(lead);
                       }}
-                      className="text-sm text-slate-500 font-mono font-medium mt-0.5 hover:text-indigo-650 inline-block"
+                      className="text-sm text-slate-555 font-mono font-medium mt-0.5 hover:text-indigo-650 inline-block"
                     >
                       {contactNumber}
                     </a>
@@ -423,10 +500,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                     <div className="grid grid-cols-2 gap-3">
                       {/* Prominent green Call button */}
                       <a
-                        href={`tel:${contactNumber}`}
+                        href="javascript:void(0)"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleInitiateCall(lead, contactNumber);
+                          handleInitiateCall(lead);
                         }}
                         className="flex items-center justify-center gap-1.5 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.99] touch-manipulation"
                       >
@@ -436,11 +513,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                         Call
                       </a>
                       <button
+                        disabled={getCallStatus(leadId) !== "verified"}
                         onClick={() => {
                           setActiveOutcomeLead(lead);
                           setOutcomeNote("");
                         }}
-                        className="flex items-center justify-center py-3 px-4 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-sm transition-all active:scale-[0.99] cursor-pointer touch-manipulation"
+                        className="flex items-center justify-center py-3 px-4 border border-slate-250 bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-slate-700 rounded-lg font-bold text-sm transition-all active:scale-[0.99] cursor-pointer touch-manipulation"
                       >
                         Log Outcome
                       </button>
