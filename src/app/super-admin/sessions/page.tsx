@@ -67,14 +67,19 @@ export default async function SessionAuditPage(props: PageProps) {
   try {
     await dbConnect();
 
-    // 1. Fetch all employees for filter dropdown
-    employees = await User.find({ isActive: true })
+    const devUsers = await User.find({ isDev: true }).select("_id").lean();
+    const devUserIds = devUsers.map(u => u._id);
+
+    // 1. Fetch all employees for filter dropdown (excluding dev users)
+    employees = await User.find({ isActive: true, isDev: { $ne: true } })
       .select("_id name")
       .sort({ name: 1 })
       .lean() as unknown as Array<{ _id: string; name: string }>;
 
     // 2. Build the query object
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      userId: { $nin: devUserIds }
+    };
 
     if (filterEmployee) {
       query.userId = filterEmployee;

@@ -53,8 +53,11 @@ export default async function SuperAdminDashboard() {
     createdAt?: Date;
   }
 
-  // Show latest 10 records on dashboard
-  const recentActivitiesRaw = (await Activity.find({})
+  // Show latest 10 records on dashboard (excluding dev users)
+  const devUsers = await User.find({ isDev: true }).select("_id").lean();
+  const devUserIds = devUsers.map(u => u._id);
+
+  const recentActivitiesRaw = (await Activity.find({ userId: { $nin: devUserIds } })
     .sort({ createdAt: -1 })
     .limit(10)
     .populate("userId")

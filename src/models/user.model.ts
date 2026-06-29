@@ -52,6 +52,11 @@ const UserSchema = new Schema<IUserDocument>(
       default: true,
       required: true,
     },
+    isDev: {
+      type: Boolean,
+      default: false,
+      required: false,
+    },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt

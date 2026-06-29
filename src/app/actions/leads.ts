@@ -743,7 +743,7 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
     }
 
     // 2. Fetch all active callers
-    const callersRaw = await User.find({ role: UserRole.CALLER, isActive: true }).lean();
+    const callersRaw = await User.find({ role: UserRole.CALLER, isActive: true, isDev: { $ne: true } }).lean();
     
     const terminalStatuses = [
       LeadStatus.CUSTOMER,

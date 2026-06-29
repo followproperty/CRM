@@ -21,6 +21,7 @@ export interface IUser {
   role: UserRole;
   adminId?: string | Types.ObjectId | null;
   isActive: boolean;
+  isDev?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

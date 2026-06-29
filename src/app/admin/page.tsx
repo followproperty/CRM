@@ -26,11 +26,11 @@ export default async function AdminDashboard() {
 
   const totalLeads = totalLeadsDirect + totalLeadsUploaded;
   const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded;
-  const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true });
+  const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true, isDev: { $ne: true } });
   const dealsClosed = dealsClosedDirect + dealsClosedUploaded;
 
   // 2. Fetch caller team details with live assigned / won stats
-  const callers = (await User.find({ role: UserRole.CALLER }).lean()) as unknown as IUser[];
+  const callers = (await User.find({ role: UserRole.CALLER, isDev: { $ne: true } }).lean()) as unknown as IUser[];
   const callersWithStats = await Promise.all(
     callers.map(async (caller: IUser) => {
       const [assignedDirect, assignedUploaded, wonDirect, wonUploaded] = await Promise.all([

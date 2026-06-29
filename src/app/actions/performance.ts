@@ -240,7 +240,8 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
     // Get all active users with role CALLER
     const callersRaw = await User.find({
       role: UserRole.CALLER,
-      isActive: true
+      isActive: true,
+      isDev: { $ne: true }
     })
       .select("name email")
       .sort({ name: 1 })
