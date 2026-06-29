@@ -128,6 +128,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
         if (stateLeadId) {
           localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
+          // Update DB status to CALLED to persist outcome enablement across reloads
+          startTransition(async () => {
+            await updateLeadStatusAction(stateLeadId, LeadStatus.CALLED, null, "Call duration completed (15s)", callState.lead.collectionType);
+          });
         }
       }
       // Auto-open modal when timer finishes
@@ -142,6 +146,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
         if (stateLeadId) {
           localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
+          // Update DB status to CALLED to persist outcome enablement across reloads
+          startTransition(async () => {
+            await updateLeadStatusAction(stateLeadId, LeadStatus.CALLED, null, "Call duration completed (15s)", callState.lead.collectionType);
+          });
         }
       }
       // Force re-render to update disabled button state
@@ -160,6 +168,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   }, [callState]);
 
   const getCallStatus = (leadId: string) => {
+    // Check if the lead is in CALLED status in the database (persistent across reloads)
+    const leadObj = leads.find((l) => (l._id ? l._id.toString() : "") === leadId);
+    if (leadObj && leadObj.status === LeadStatus.CALLED) {
+      return "verified";
+    }
+
     if (typeof window !== "undefined") {
       const todayStr = getISTDateString();
       const savedDate = localStorage.getItem(`unlocked_outcome_${leadId}`);
