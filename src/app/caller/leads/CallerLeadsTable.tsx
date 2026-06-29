@@ -3,7 +3,7 @@
 import React, { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateLeadStatusAction, scheduleSiteVisitAction, requestWhatsAppFollowupAction } from "@/app/actions/leads";
-import { LeadStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
+import { LeadStatus, FollowUpStatus, SiteVisitStatus, ILead, LEAD_STATUS_LABELS } from "@/types/lead";
 import { UserRole } from "@/types/user";
 import LeadDetailsModal from "@/components/leads/LeadDetailsModal";
 
@@ -46,6 +46,10 @@ function getStatusStyles(status: LeadStatus) {
 
 export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const router = useRouter();
+  const [leadsList, setLeadsList] = useState<ILead[]>(leads);
+  const [activeCallLeadId, setActiveCallLeadId] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -81,13 +85,11 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const [maybeLaterDate, setMaybeLaterDate] = useState("");
   const [maybeLaterNote, setMaybeLaterNote] = useState("");
 
-  const [callState, setCallState] = useState<{ lead: ILead; startTime: number } | null>(null);
+  useEffect(() => {
+    setLeadsList(leads);
+  }, [leads]);
 
-  const getISTDateString = () => {
-    return new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-  };
-
-  // Hydrate state from sessionStorage on load
+  // Hydrate active call state from sessionStorage on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = sessionStorage.getItem("active_call");
@@ -95,137 +97,89 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
       try {
         const parsed = JSON.parse(saved);
         const elapsed = Date.now() - parsed.startTime;
+        const leadId = parsed.leadId;
+        const collectionType = parsed.collectionType;
+
         if (elapsed < 15000) {
-          setCallState(parsed);
+          setActiveCallLeadId(leadId);
+          setSecondsLeft(Math.max(0, Math.ceil((15000 - elapsed) / 1000)));
         } else {
-          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
-          if (parsedLeadId) {
-            localStorage.setItem(`unlocked_outcome_${parsedLeadId}`, getISTDateString());
-          }
           sessionStorage.removeItem("active_call");
+          // If the lead status was NEW, update it to CALLED since the call is finished
+          const leadObj = leadsList.find(l => (l._id ? l._id.toString() : "") === leadId);
+          if (leadObj && leadObj.status === LeadStatus.NEW) {
+            setLeadsList(prev => prev.map(l =>
+              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+            ));
+            startTransition(async () => {
+              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
+            });
+          }
         }
       } catch {
         sessionStorage.removeItem("active_call");
       }
     }
-  }, []);
+  }, [leadsList]);
 
-  // Manage countdown timer and auto-opening modal
+  // Manage countdown timer and bg DB update
   useEffect(() => {
-    if (!callState) return;
+    if (!activeCallLeadId || secondsLeft <= 0) return;
 
-    // Set up a 1-second interval to update the countdown display
     const interval = setInterval(() => {
-      // Force a state update to trigger re-render
-      setCallState((current) => current ? { ...current } : null);
+      setSecondsLeft((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          clearInterval(interval);
+          
+          // Timer finished! Update local state to CALLED
+          const activeLead = leadsList.find(l => (l._id ? l._id.toString() : "") === activeCallLeadId);
+          if (activeLead) {
+            const leadId = activeCallLeadId;
+            const collectionType = activeLead.collectionType;
+
+            setLeadsList(prevList => prevList.map(l =>
+              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+            ));
+
+            // Auto-open modal when timer finishes
+            setActiveOutcomeLead({ ...activeLead, status: LeadStatus.CALLED });
+            setOutcomeNote("");
+
+            // Update database in background
+            startTransition(async () => {
+              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
+            });
+          }
+
+          setActiveCallLeadId(null);
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("active_call");
+          }
+          return 0;
+        }
+        return next;
+      });
     }, 1000);
 
-    const elapsed = Date.now() - callState.startTime;
-    const remaining = 15000 - elapsed;
-    if (remaining <= 0) {
-      clearInterval(interval);
-      if (typeof window !== "undefined") {
-        const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
-        if (stateLeadId) {
-          localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
-          // Update DB status to CALLED to persist outcome enablement across reloads
-          startTransition(async () => {
-            await updateLeadStatusAction(stateLeadId, LeadStatus.CALLED, null, "Call duration completed (15s)", callState.lead.collectionType);
-          });
-        }
-      }
-      // Auto-open modal when timer finishes
-      setActiveOutcomeLead((curr) => curr || callState.lead);
-      setOutcomeNote("");
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      clearInterval(interval);
-      if (typeof window !== "undefined") {
-        const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
-        if (stateLeadId) {
-          localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
-          // Update DB status to CALLED to persist outcome enablement across reloads
-          startTransition(async () => {
-            await updateLeadStatusAction(stateLeadId, LeadStatus.CALLED, null, "Call duration completed (15s)", callState.lead.collectionType);
-          });
-        }
-      }
-      // Force re-render to update disabled button state
-      setCallState((current) => current ? { ...current } : null);
-      setActiveOutcomeLead((curr) => curr || callState.lead);
-      setOutcomeNote("");
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("active_call");
-      }
-    }, remaining);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
-  }, [callState]);
+    return () => clearInterval(interval);
+  }, [activeCallLeadId, secondsLeft, leadsList]);
 
   const getCallStatus = (leadId: string) => {
-    // Check if the lead is in CALLED status in the database (persistent across reloads)
-    const leadObj = leads.find((l) => (l._id ? l._id.toString() : "") === leadId);
+    const leadObj = leadsList.find((l) => (l._id ? l._id.toString() : "") === leadId);
     if (leadObj && leadObj.status === LeadStatus.CALLED) {
       return "verified";
     }
 
-    if (typeof window !== "undefined") {
-      const todayStr = getISTDateString();
-      const savedDate = localStorage.getItem(`unlocked_outcome_${leadId}`);
-      if (savedDate === todayStr) {
-        return "verified";
-      }
-    }
-    if (callState) {
-      const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
-      if (stateLeadId === leadId) {
-        const elapsed = Date.now() - callState.startTime;
-        return elapsed >= 15000 ? "verified" : "calling";
-      }
-    }
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("active_call");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
-          if (parsedLeadId === leadId) {
-            const elapsed = Date.now() - parsed.startTime;
-            return elapsed >= 15000 ? "verified" : "calling";
-          }
-        } catch {}
-      }
+    if (activeCallLeadId === leadId) {
+      return secondsLeft <= 0 ? "verified" : "calling";
     }
     return "idle";
   };
 
   const getRemainingSeconds = (leadId: string) => {
-    if (callState) {
-      const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
-      if (stateLeadId === leadId) {
-        const elapsed = Date.now() - callState.startTime;
-        const remaining = Math.max(0, Math.ceil((15000 - elapsed) / 1000));
-        return remaining;
-      }
-    }
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("active_call");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
-          if (parsedLeadId === leadId) {
-            const elapsed = Date.now() - parsed.startTime;
-            const remaining = Math.max(0, Math.ceil((15000 - elapsed) / 1000));
-            return remaining;
-          }
-        } catch {}
-      }
+    if (activeCallLeadId === leadId) {
+      return secondsLeft;
     }
     return 0;
   };
@@ -253,11 +207,28 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   };
 
   const handleInitiateCall = (lead: ILead) => {
+    const leadId = lead._id ? lead._id.toString() : "";
+    
+    // Check if there is any lead with status CALLED
+    const hasUnmarkedLead = leadsList.some((l) => l.status === LeadStatus.CALLED);
+    if (hasUnmarkedLead) {
+      showMessage("Please log the status of your previous call before starting a new one.", true);
+      return;
+    }
+
+    // Check if there is a call currently in progress
+    if (activeCallLeadId) {
+      showMessage("A call is already in progress. Please wait.", true);
+      return;
+    }
+
     const startTime = Date.now();
-    const newState = { lead, startTime };
-    setCallState(newState);
+    setActiveCallLeadId(leadId);
+    setSecondsLeft(15);
+
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("active_call", JSON.stringify(newState));
+      const sessionState = { leadId, startTime, collectionType: lead.collectionType };
+      sessionStorage.setItem("active_call", JSON.stringify(sessionState));
       triggerDialer(lead.primaryPhone || lead.phone);
     }
   };
@@ -278,6 +249,11 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     setActiveOutcomeLead(null);
     setOutcomeNote("");
 
+    // Update locally first for instant UI response!
+    setLeadsList(prev => prev.map(l =>
+      (l._id ? l._id.toString() : "") === leadId ? { ...l, status, updatedAt: new Date() } : l
+    ));
+
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
       if (result.success) {
@@ -285,6 +261,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         refreshPage();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
+        // Rollback
+        setLeadsList(prev => prev.map(l =>
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+        ));
       }
     });
   };
@@ -296,6 +276,11 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     setActiveOutcomeLead(null);
     setOutcomeNote("");
 
+    // Update locally first for instant UI response!
+    setLeadsList(prev => prev.map(l =>
+      (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.ADMIN_FOLLOWUP, handedOffToAdmin: true, updatedAt: new Date() } : l
+    ));
+
     startTransition(async () => {
       const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
       if (result.success) {
@@ -303,6 +288,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         refreshPage();
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
+        // Rollback
+        setLeadsList(prev => prev.map(l =>
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, handedOffToAdmin: false } : l
+        ));
       }
     });
   };
@@ -318,6 +307,16 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     setCallbackDate("");
     setCallbackNote("");
 
+    // Update locally first for instant UI response!
+    setLeadsList(prev => prev.map(l =>
+      (l._id ? l._id.toString() : "") === leadId ? {
+        ...l,
+        status: LeadStatus.FOLLOW_UP,
+        updatedAt: new Date(),
+        followUp: { date: new Date(callbackDate), status: FollowUpStatus.PENDING, notes: callbackNote }
+      } : l
+    ));
+
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, LeadStatus.FOLLOW_UP, callbackDate, callbackNote, callbackLead.collectionType);
       if (result.success) {
@@ -325,6 +324,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         refreshPage();
       } else {
         showMessage(result.error || "Failed to schedule callback.", true);
+        // Rollback
+        setLeadsList(prev => prev.map(l =>
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, followUp: undefined } : l
+        ));
       }
     });
   };
@@ -340,6 +343,18 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     setSiteVisitDate("");
     setSiteVisitNotes("");
 
+    // Update locally first for instant UI response!
+    setLeadsList(prev => prev.map(l =>
+      (l._id ? l._id.toString() : "") === leadId ? {
+        ...l,
+        status: LeadStatus.SITE_VISIT,
+        updatedAt: new Date(),
+        siteVisitDate: new Date(siteVisitDate),
+        siteVisitStatus: SiteVisitStatus.SCHEDULED,
+        siteVisitNotes
+      } : l
+    ));
+
     startTransition(async () => {
       const result = await scheduleSiteVisitAction(leadId, siteVisitDate, siteVisitNotes, siteVisitLead.collectionType);
       if (result.success) {
@@ -347,6 +362,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         refreshPage();
       } else {
         showMessage(result.error || "Failed to schedule site visit.", true);
+        // Rollback
+        setLeadsList(prev => prev.map(l =>
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, siteVisitDate: undefined, siteVisitStatus: undefined, siteVisitNotes: undefined } : l
+        ));
       }
     });
   };
@@ -354,7 +373,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   const closeOutcomeModal = () => {
     setActiveOutcomeLead(null);
     setOutcomeNote("");
-    setCallState(null);
+    setActiveCallLeadId(null);
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("active_call");
     }
@@ -391,6 +410,23 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
     closeOutcomeModal();
 
+    // Update locally first for instant UI response!
+    setLeadsList(prev => prev.map(l =>
+      (l._id ? l._id.toString() : "") === leadId ? {
+        ...l,
+        status,
+        updatedAt: new Date(),
+        projectName: extraDetails?.projectName || l.projectName,
+        city: extraDetails?.city || l.city,
+        budgetValue: extraDetails?.budgetValue || l.budgetValue,
+        budgetUnit: extraDetails?.budgetUnit || l.budgetUnit,
+        configuration: extraDetails?.configuration || l.configuration,
+        possessionTimeline: extraDetails?.possessionTimeline || l.possessionTimeline,
+        maybeLaterTimeframe: extraDetails?.maybeLaterTimeframe || l.maybeLaterTimeframe,
+        maybeLaterDate: extraDetails?.maybeLaterDate || l.maybeLaterDate
+      } : l
+    ));
+
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
       if (result.success) {
@@ -398,6 +434,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         refreshPage();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
+        // Rollback
+        setLeadsList(prev => prev.map(l =>
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+        ));
       }
     });
   };
@@ -435,14 +475,14 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {leads.length === 0 ? (
+              {leadsList.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">
                     No leads currently assigned to you.
                   </td>
                 </tr>
               ) : (
-                leads.map((lead) => {
+                leadsList.map((lead) => {
                   const leadId = lead._id ? lead._id.toString() : "";
                   const isLocked = isHandoffLocked(lead.status);
                   const contactNumber = lead.primaryPhone || lead.phone;
@@ -483,7 +523,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         {isLocked ? (
-                          <span className="text-xs font-semibold text-slate-400">Locked (Admin)</span>
+                           <span className="text-xs font-semibold text-slate-400">Locked (Admin)</span>
                         ) : (
                           <div className="flex justify-end gap-2">
                             <a
@@ -520,12 +560,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
       {/* Mobile Card List View (hidden on desktop, visible on screens < 768px) */}
       <div className="block md:hidden space-y-4">
-        {leads.length === 0 ? (
+        {leadsList.length === 0 ? (
           <div className="p-8 rounded-xl bg-slate-50 border border-slate-200 border-dashed text-center">
             <p className="text-sm text-slate-500">No leads currently assigned to you.</p>
           </div>
         ) : (
-          leads.map((lead) => {
+          leadsList.map((lead) => {
             const leadId = lead._id ? lead._id.toString() : "";
             const isLocked = isHandoffLocked(lead.status);
             const contactNumber = lead.primaryPhone || lead.phone;

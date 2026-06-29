@@ -129,23 +129,23 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
     const day = parts.find((p) => p.type === "day")?.value;
     const startOfTodayIST = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
 
-    // Sort: NEW and uncalled-today leads at the top, called-today leads at the bottom
+    // Sort: NEW/CALLED leads at the top, and leads called & marked today at the bottom
     mergedLeads.sort((a, b) => {
-      const isNewA = a.status === LeadStatus.NEW;
-      const isNewB = b.status === LeadStatus.NEW;
+      const isNewOrCalledA = a.status === LeadStatus.NEW || a.status === LeadStatus.CALLED;
+      const isNewOrCalledB = b.status === LeadStatus.NEW || b.status === LeadStatus.CALLED;
 
-      const wasCalledTodayA = !isNewA && a.updatedAt && new Date(a.updatedAt) >= startOfTodayIST;
-      const wasCalledTodayB = !isNewB && b.updatedAt && new Date(b.updatedAt) >= startOfTodayIST;
+      const wasCalledTodayA = !isNewOrCalledA && a.updatedAt && new Date(a.updatedAt) >= startOfTodayIST;
+      const wasCalledTodayB = !isNewOrCalledB && b.updatedAt && new Date(b.updatedAt) >= startOfTodayIST;
 
-      // Group 1: Not called today; Group 2: Called today (should go to bottom)
+      // Group 1: Not called/marked today; Group 2: Called and marked today (should go to bottom)
       if (wasCalledTodayA && !wasCalledTodayB) return 1;
       if (!wasCalledTodayA && wasCalledTodayB) return -1;
 
       // If both are in the same group (both not called today, or both called today)
       if (!wasCalledTodayA) {
-        // Pinned NEW leads at the top of Group 1
-        if (isNewA && !isNewB) return -1;
-        if (!isNewA && isNewB) return 1;
+        // Pinned NEW and CALLED leads at the top of Group 1
+        if (isNewOrCalledA && !isNewOrCalledB) return -1;
+        if (!isNewOrCalledA && isNewOrCalledB) return 1;
 
         // Otherwise sort Group 1 by updatedAt descending (newest first)
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
