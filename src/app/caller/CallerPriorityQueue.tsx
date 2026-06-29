@@ -70,9 +70,17 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   // Manage countdown timer and auto-opening modal
   useEffect(() => {
     if (!callState) return;
+
+    // Set up a 1-second interval to update the countdown display
+    const interval = setInterval(() => {
+      // Force a state update to trigger re-render
+      setCallState((current) => current ? { ...current } : null);
+    }, 1000);
+
     const elapsed = Date.now() - callState.startTime;
     const remaining = 15000 - elapsed;
     if (remaining <= 0) {
+      clearInterval(interval);
       // Auto-open modal when timer finishes
       setActiveOutcomeLead((curr) => curr || callState.lead);
       setOutcomeNote("");
@@ -80,6 +88,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     }
 
     const timer = setTimeout(() => {
+      clearInterval(interval);
       // Force re-render to update disabled button state
       setCallState((current) => current ? { ...current } : null);
       setActiveOutcomeLead((curr) => curr || callState.lead);
@@ -89,7 +98,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       }
     }, remaining);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, [callState]);
 
   const getCallStatus = (leadId: string) => {
@@ -114,6 +126,32 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       }
     }
     return "idle";
+  };
+
+  const getRemainingSeconds = (leadId: string) => {
+    if (callState) {
+      const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
+      if (stateLeadId === leadId) {
+        const elapsed = Date.now() - callState.startTime;
+        const remaining = Math.max(0, Math.ceil((15000 - elapsed) / 1000));
+        return remaining;
+      }
+    }
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("active_call");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
+          if (parsedLeadId === leadId) {
+            const elapsed = Date.now() - parsed.startTime;
+            const remaining = Math.max(0, Math.ceil((15000 - elapsed) / 1000));
+            return remaining;
+          }
+        } catch {}
+      }
+    }
+    return 0;
   };
 
   const showMessage = (text: string, isError = false) => {
@@ -482,7 +520,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                             }}
                             className="flex items-center justify-center py-3 px-4 border border-slate-250 bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-slate-700 rounded-lg font-bold text-sm transition-all active:scale-[0.99] cursor-pointer touch-manipulation"
                           >
-                            Log Outcome
+                            {getCallStatus(leadId) === "calling" ? `Log Outcome (${getRemainingSeconds(leadId)}s)` : "Log Outcome"}
                           </button>
                         </div>
                       )}
