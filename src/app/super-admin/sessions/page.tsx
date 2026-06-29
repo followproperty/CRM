@@ -81,7 +81,8 @@ export default async function SessionAuditPage(props: PageProps) {
             logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
           },
         },
-      ]
+      ],
+      { updatePipeline: true }
     );
 
     const devUsers = await User.find({ isDev: true }).select("_id").lean();

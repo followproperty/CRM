@@ -17,7 +17,8 @@ export async function markSessionExpired(sessionId: string): Promise<void> {
             logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
           },
         },
-      ]
+      ],
+      { updatePipeline: true }
     );
   } catch (error) {
     console.error("Error updating expired session status:", error);
@@ -45,7 +46,8 @@ export async function cleanOldUserSessions(userId: string): Promise<void> {
             logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
           },
         },
-      ]
+      ],
+      { updatePipeline: true }
     );
   } catch (error) {
     console.error("Error cleaning up old user sessions:", error);
