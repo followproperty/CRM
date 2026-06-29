@@ -106,7 +106,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         } else {
           sessionStorage.removeItem("active_call");
           // If the lead status was NEW, update it to CALLED since the call is finished
-          const leadObj = leadsList.find(l => (l._id ? l._id.toString() : "") === leadId);
+          const leadObj = leads.find(l => (l._id ? l._id.toString() : "") === leadId);
           if (leadObj && leadObj.status === LeadStatus.NEW) {
             setLeadsList(prev => prev.map(l =>
               (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
@@ -120,50 +120,50 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         sessionStorage.removeItem("active_call");
       }
     }
-  }, [leadsList]);
+  }, [leads]);
 
-  // Manage countdown timer and bg DB update
+  // Handle side-effects when active call countdown reaches 0
+  useEffect(() => {
+    if (activeCallLeadId && secondsLeft === 0) {
+      // Find the active lead details
+      const activeLead = leadsList.find(l => (l._id ? l._id.toString() : "") === activeCallLeadId);
+      if (activeLead) {
+        const leadId = activeCallLeadId;
+        const collectionType = activeLead.collectionType;
+
+        // 1. Update local state to CALLED
+        setLeadsList(prevList => prevList.map(l => 
+          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+        ));
+
+        // 2. Auto-open modal when timer finishes
+        setActiveOutcomeLead({ ...activeLead, status: LeadStatus.CALLED });
+        setOutcomeNote("");
+
+        // 3. Update database in background
+        startTransition(async () => {
+          await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
+        });
+      }
+
+      // Clear active call state
+      setActiveCallLeadId(null);
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("active_call");
+      }
+    }
+  }, [activeCallLeadId, secondsLeft, leadsList]);
+
+  // Manage countdown timer decrement
   useEffect(() => {
     if (!activeCallLeadId || secondsLeft <= 0) return;
 
     const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        const next = prev - 1;
-        if (next <= 0) {
-          clearInterval(interval);
-          
-          // Timer finished! Update local state to CALLED
-          const activeLead = leadsList.find(l => (l._id ? l._id.toString() : "") === activeCallLeadId);
-          if (activeLead) {
-            const leadId = activeCallLeadId;
-            const collectionType = activeLead.collectionType;
-
-            setLeadsList(prevList => prevList.map(l =>
-              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
-            ));
-
-            // Auto-open modal when timer finishes
-            setActiveOutcomeLead({ ...activeLead, status: LeadStatus.CALLED });
-            setOutcomeNote("");
-
-            // Update database in background
-            startTransition(async () => {
-              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
-            });
-          }
-
-          setActiveCallLeadId(null);
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("active_call");
-          }
-          return 0;
-        }
-        return next;
-      });
+      setSecondsLeft((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeCallLeadId, secondsLeft, leadsList]);
+  }, [activeCallLeadId, secondsLeft]);
 
   const getCallStatus = (leadId: string) => {
     const leadObj = leadsList.find((l) => (l._id ? l._id.toString() : "") === leadId);
