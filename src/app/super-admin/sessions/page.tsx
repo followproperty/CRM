@@ -85,6 +85,22 @@ export default async function SessionAuditPage(props: PageProps) {
       { updatePipeline: true }
     );
 
+    // Retroactively populate logoutAt for already-EXPIRED sessions that have logoutAt as null
+    await LoginSession.updateMany(
+      {
+        status: SessionStatus.EXPIRED,
+        logoutAt: null,
+      },
+      [
+        {
+          $set: {
+            logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
+          },
+        },
+      ],
+      { updatePipeline: true }
+    );
+
     const devUsers = await User.find({ isDev: true }).select("_id").lean();
     const devUserIds = devUsers.map(u => u._id);
 
