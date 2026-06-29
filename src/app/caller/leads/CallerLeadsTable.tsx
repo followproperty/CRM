@@ -83,6 +83,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
   const [callState, setCallState] = useState<{ lead: ILead; startTime: number } | null>(null);
 
+  const getISTDateString = () => {
+    return new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+  };
+
   // Hydrate state from sessionStorage on load
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -94,6 +98,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
         if (elapsed < 15000) {
           setCallState(parsed);
         } else {
+          const parsedLeadId = parsed.lead._id ? parsed.lead._id.toString() : "";
+          if (parsedLeadId) {
+            localStorage.setItem(`unlocked_outcome_${parsedLeadId}`, getISTDateString());
+          }
           sessionStorage.removeItem("active_call");
         }
       } catch {
@@ -116,6 +124,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
     const remaining = 15000 - elapsed;
     if (remaining <= 0) {
       clearInterval(interval);
+      if (typeof window !== "undefined") {
+        const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
+        if (stateLeadId) {
+          localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
+        }
+      }
       // Auto-open modal when timer finishes
       setActiveOutcomeLead((curr) => curr || callState.lead);
       setOutcomeNote("");
@@ -124,6 +138,12 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
     const timer = setTimeout(() => {
       clearInterval(interval);
+      if (typeof window !== "undefined") {
+        const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
+        if (stateLeadId) {
+          localStorage.setItem(`unlocked_outcome_${stateLeadId}`, getISTDateString());
+        }
+      }
       // Force re-render to update disabled button state
       setCallState((current) => current ? { ...current } : null);
       setActiveOutcomeLead((curr) => curr || callState.lead);
@@ -140,6 +160,13 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
   }, [callState]);
 
   const getCallStatus = (leadId: string) => {
+    if (typeof window !== "undefined") {
+      const todayStr = getISTDateString();
+      const savedDate = localStorage.getItem(`unlocked_outcome_${leadId}`);
+      if (savedDate === todayStr) {
+        return "verified";
+      }
+    }
     if (callState) {
       const stateLeadId = callState.lead._id ? callState.lead._id.toString() : "";
       if (stateLeadId === leadId) {
