@@ -10,7 +10,14 @@ export async function markSessionExpired(sessionId: string): Promise<void> {
     await dbConnect();
     await LoginSession.findOneAndUpdate(
       { sessionId, status: SessionStatus.ACTIVE },
-      { status: SessionStatus.EXPIRED }
+      [
+        {
+          $set: {
+            status: SessionStatus.EXPIRED,
+            logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
+          },
+        },
+      ]
     );
   } catch (error) {
     console.error("Error updating expired session status:", error);
@@ -31,9 +38,14 @@ export async function cleanOldUserSessions(userId: string): Promise<void> {
         status: SessionStatus.ACTIVE,
         loginAt: { $lt: fourHoursAgo },
       },
-      {
-        status: SessionStatus.EXPIRED,
-      }
+      [
+        {
+          $set: {
+            status: SessionStatus.EXPIRED,
+            logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
+          },
+        },
+      ]
     );
   } catch (error) {
     console.error("Error cleaning up old user sessions:", error);

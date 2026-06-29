@@ -74,9 +74,14 @@ export default async function SessionAuditPage(props: PageProps) {
         status: SessionStatus.ACTIVE,
         loginAt: { $lt: fourHoursAgo },
       },
-      {
-        status: SessionStatus.EXPIRED,
-      }
+      [
+        {
+          $set: {
+            status: SessionStatus.EXPIRED,
+            logoutAt: { $add: ["$loginAt", 4 * 60 * 60 * 1000] },
+          },
+        },
+      ]
     );
 
     const devUsers = await User.find({ isDev: true }).select("_id").lean();
