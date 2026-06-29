@@ -67,6 +67,18 @@ export default async function SessionAuditPage(props: PageProps) {
   try {
     await dbConnect();
 
+    // Automatically clean up/expire all active sessions older than 4 hours database-wide
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    await LoginSession.updateMany(
+      {
+        status: SessionStatus.ACTIVE,
+        loginAt: { $lt: fourHoursAgo },
+      },
+      {
+        status: SessionStatus.EXPIRED,
+      }
+    );
+
     const devUsers = await User.find({ isDev: true }).select("_id").lean();
     const devUserIds = devUsers.map(u => u._id);
 
