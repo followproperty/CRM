@@ -405,56 +405,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         {/* Left Side: Locality Finder */}
         <div className={`lg:col-span-5 ${selectedProject ? "hidden lg:block" : "block"}`}>
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs">
-            
-            {/* GPS Toggle Switch (ON / OFF) */}
-            <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-5 shadow-2xs">
-              <div className="flex flex-col gap-0.5 pr-2">
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  📡 GPS Auto-Locator
-                </span>
-                <span className="text-[10px] text-slate-500 leading-normal">
-                  Auto-detect nearest sector center on load.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const nextState = !gpsActive;
-                  setGpsActive(nextState);
-                  if (nextState) {
-                    autoCaptureGps();
-                  } else {
-                    // Turn OFF: 0 consumption and clear all coordinates
-                    setLatitude(null);
-                    setLongitude(null);
-                    setGpsAccuracy(null);
-                    setSelectedLocality("");
-                    setSearchLocality("");
-                    setProjects([]);
-                  }
-                }}
-                className={`relative inline-flex h-6.5 w-13 flex-shrink-0 items-center rounded-full transition-colors duration-250 cursor-pointer outline-none border-0 ${
-                  gpsActive ? "bg-indigo-650" : "bg-slate-400"
-                }`}
-              >
-                <span className={`text-[8.5px] font-black absolute transition-all duration-200 ${
-                  gpsActive ? "left-2.5 text-white" : "right-2.5 text-slate-800"
-                }`}>
-                  {gpsActive ? "ON" : "OFF"}
-                </span>
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    gpsActive ? "translate-x-7" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-
             <h2 className="text-base md:text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
               📍 Locality Finder
             </h2>
             
-            {/* Autocomplete Search input container with click-outside ref */}
+            {/* 1. Autocomplete Search input container with click-outside ref */}
             <div ref={searchRef} className="relative mt-3 z-30">
               <input
                 type="text"
@@ -497,6 +452,45 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   })}
                 </ul>
               )}
+            </div>
+
+            {/* 2. GPS Toggle Switch (ON / OFF) */}
+            <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+              <div className="flex flex-col gap-0.5 pr-2">
+                <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  📡 GPS Auto-Locator
+                </span>
+                <span className="text-[9.5px] text-slate-500 leading-normal">
+                  Find nearest projects automatically.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !gpsActive;
+                  setGpsActive(nextState);
+                  if (nextState) {
+                    autoCaptureGps();
+                  } else {
+                    // Turn OFF: 0 consumption and clear all coordinates
+                    setLatitude(null);
+                    setLongitude(null);
+                    setGpsAccuracy(null);
+                    setSelectedLocality("");
+                    setSearchLocality("");
+                    setProjects([]);
+                  }
+                }}
+                className={`relative inline-flex h-5.5 w-10 flex-shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer outline-none border-0 ${
+                  gpsActive ? "bg-slate-800" : "bg-slate-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    gpsActive ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
             </div>
 
             {/* Total count details */}
