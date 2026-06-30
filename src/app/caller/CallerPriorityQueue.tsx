@@ -79,9 +79,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
         const leadId = parsed.leadId;
         const collectionType = parsed.collectionType;
 
-        if (elapsed < 15000) {
+        if (elapsed < 10000) {
           setActiveCallLeadId(leadId);
-          setSecondsLeft(Math.max(0, Math.ceil((15000 - elapsed) / 1000)));
+          setSecondsLeft(Math.max(0, Math.ceil((10000 - elapsed) / 1000)));
         } else {
           sessionStorage.removeItem("active_call");
           // If the lead status was NEW, update it to CALLED since the call is finished
@@ -91,7 +91,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
               (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
             ));
             startTransition(async () => {
-              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
+              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (10s)", collectionType);
             });
           }
         }
@@ -121,7 +121,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
         // 3. Update database in background
         startTransition(async () => {
-          await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (15s)", collectionType);
+          await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (10s)", collectionType);
         });
       }
 
@@ -273,7 +273,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     const startTime = Date.now();
     setActiveCallLeadId(leadId);
-    setSecondsLeft(15);
+    setSecondsLeft(10);
 
     if (typeof window !== "undefined") {
       const sessionState = { leadId, startTime, collectionType: lead.collectionType };
