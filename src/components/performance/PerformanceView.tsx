@@ -8,9 +8,16 @@ import { formatToISTShort } from "@/lib/date";
 interface PerformanceViewProps {
   metrics: CallerPerformanceMetrics;
   showTitle?: boolean;
+  period?: "today" | "week" | "month" | "year";
+  customDate?: string;
 }
 
-export default function PerformanceView({ metrics, showTitle = true }: PerformanceViewProps) {
+export default function PerformanceView({ 
+  metrics, 
+  showTitle = true,
+  period = "today",
+  customDate
+}: PerformanceViewProps) {
   const {
     callerName,
     totalAssigned,
@@ -22,10 +29,45 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
     totalCalls,
     statusBreakdown,
     recentActivities,
+    // Dynamic filtered fields
+    assignedPeriod,
+    calledPeriod,
+    callsPeriod,
+    callsTargetDate,
+    callsYesterday,
+    callsDayBeforeYesterday
   } = metrics;
 
+  // Date Parsing & Formatting Helper
+  const formatHeaderDate = (dateStr: string, offsetDays: number = 0) => {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return '';
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(Date.UTC(y, m, d + offsetDays, 12, 0, 0));
+    return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
+
+  const defaultDate = () => {
+    const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
+    return new Date(Date.now() + istOffsetMs).toISOString().split("T")[0];
+  };
+
+  const activeDate = customDate || defaultDate();
+
+  const periodLabel = period === "week" ? "This Week" 
+                    : period === "month" ? "This Month" 
+                    : period === "year" ? "This Year" 
+                    : formatHeaderDate(activeDate, 0);
+
+  // Fallback to today fields if action was queried without filters
+  const activeAssignedPeriod = assignedPeriod !== undefined ? assignedPeriod : assignedToday;
+  const activeCalledPeriod = calledPeriod !== undefined ? calledPeriod : calledToday;
+  const activeCallsPeriod = callsPeriod !== undefined ? callsPeriod : callsToday;
+
   // Calculate percentages safely
-  const todayProgressPct = assignedToday > 0 ? Math.round((calledToday / assignedToday) * 100) : 0;
+  const periodProgressPct = activeAssignedPeriod > 0 ? Math.round((activeCalledPeriod / activeAssignedPeriod) * 100) : 0;
   const actionedPct = totalAssigned > 0 ? Math.round((actionedLeads / totalAssigned) * 100) : 0;
   const activePct = totalAssigned > 0 ? Math.round((activeLeads / totalAssigned) * 100) : 0;
 
@@ -68,41 +110,45 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
 
       {/* Primary KPI Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Today's Calls */}
+        {/* Timeframe Calls */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Calls Made Today</p>
-            <p className="text-3xl font-extrabold text-slate-800 mt-1.5">{callsToday}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Calls Made ({periodLabel})
+            </p>
+            <p className="text-3xl font-extrabold text-slate-800 mt-1.5">{activeCallsPeriod}</p>
           </div>
-          <div className="mt-4 text-[10px] text-slate-500 font-semibold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Updated in real-time</span>
+          <div className="mt-4 text-[10px] text-slate-550 font-semibold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-550 animate-pulse" />
+            <span>Active timeframe stats</span>
           </div>
         </div>
 
-        {/* Today's Assignment Progress */}
+        {/* Timeframe Calling Progress */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Today&apos;s Calling Progress</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Calling Progress ({periodLabel})
+            </p>
             <p className="text-3xl font-extrabold text-slate-800 mt-1.5">
-              {calledToday}<span className="text-slate-400 text-sm font-medium">/{assignedToday}</span>
+              {activeCalledPeriod}<span className="text-slate-400 text-sm font-medium">/{activeAssignedPeriod}</span>
             </p>
           </div>
           <div className="mt-4 space-y-1">
             <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${todayProgressPct}%` }}
+                style={{ width: `${periodProgressPct}%` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-400 font-bold">
-              <span>{todayProgressPct}% completed</span>
-              <span>assigned today</span>
+            <div className="flex justify-between text-[10px] text-slate-405 font-bold">
+              <span>{periodProgressPct}% completed</span>
+              <span>assigned</span>
             </div>
           </div>
         </div>
 
-        {/* Active In-Progress Leads */}
+        {/* Active In-Progress Leads (All Time) */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Leads</p>
@@ -147,6 +193,48 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
         </div>
       </div>
 
+      {/* 3-Day Call Trend Panel */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm">
+        <div>
+          <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">3-Day Call Summary</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">Call frequency comparison surrounding the target date.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3 md:gap-4 mt-3">
+          {/* Day Before Yesterday */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+              {formatHeaderDate(activeDate, -2)}
+            </span>
+            <span className="text-xl md:text-2xl font-extrabold text-slate-750 block mt-1">
+              {callsDayBeforeYesterday ?? 0}
+            </span>
+            <span className="text-[9px] text-slate-400 block mt-0.5">calls made</span>
+          </div>
+
+          {/* Yesterday */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+              {formatHeaderDate(activeDate, -1)}
+            </span>
+            <span className="text-xl md:text-2xl font-extrabold text-slate-750 block mt-1">
+              {callsYesterday ?? 0}
+            </span>
+            <span className="text-[9px] text-slate-400 block mt-0.5">calls made</span>
+          </div>
+
+          {/* Target Date */}
+          <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 text-center ring-1 ring-indigo-500/10">
+            <span className="text-[9px] md:text-[10px] font-bold text-indigo-650 uppercase tracking-wider block truncate">
+              {formatHeaderDate(activeDate, 0)} (Target)
+            </span>
+            <span className="text-xl md:text-2xl font-extrabold text-indigo-700 block mt-1">
+              {callsTargetDate !== undefined ? callsTargetDate : activeCallsPeriod}
+            </span>
+            <span className="text-[9px] text-indigo-500 font-bold block mt-0.5">calls made</span>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Sections: Pipeline Breakdown & Recent Work */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         {/* Pipeline Breakdown */}
@@ -184,12 +272,14 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
           </div>
         </div>
 
-        {/* Recent Activities Today */}
+        {/* Recent Activities */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm md:col-span-7 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
-              <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">Today&apos;s Call History</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Your most recent logging activities today.</p>
+              <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">
+                Call History ({periodLabel})
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Your most recent logging activities in the selected timeframe.</p>
             </div>
 
             <div className="divide-y divide-slate-100 overflow-y-auto max-h-[360px] pr-1.5 space-y-3 pt-1">
@@ -213,7 +303,7 @@ export default function PerformanceView({ metrics, showTitle = true }: Performan
 
               {recentActivities.length === 0 && (
                 <div className="text-center py-10">
-                  <p className="text-xs text-slate-400 italic">No calls logged today yet.</p>
+                  <p className="text-xs text-slate-400 italic">No calls logged in this period.</p>
                   <p className="text-[10px] text-slate-400 mt-1">Updates will display here immediately when you submit caller actions.</p>
                 </div>
               )}

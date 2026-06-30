@@ -9,26 +9,88 @@ import { UserRole } from "@/types/user";
 import { ActivityAction } from "@/types/activity";
 import { getSession } from "@/lib/session";
 
+export interface PerformanceFilterParams {
+  date?: string;
+  period?: "today" | "week" | "month" | "year";
+}
+
 /**
- * Helper to calculate start and end of "Today" in Indian Standard Time (IST).
- * Returns Date objects in UTC corresponding to IST boundaries.
+ * Helper to calculate IST range boundaries for target date, yesterday, day before yesterday, and period.
  */
-function getISTTodayRange(): { start: Date; end: Date } {
+function getISTRange(params?: PerformanceFilterParams) {
   const now = new Date();
   const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
-  const nowIST = new Date(now.getTime() + istOffsetMs);
-  
-  const year = nowIST.getUTCFullYear();
-  const month = nowIST.getUTCMonth();
-  const date = nowIST.getUTCDate();
-  
-  const startIST = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
-  const startUTC = new Date(startIST.getTime() - istOffsetMs);
-  
-  const endIST = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
-  const endUTC = new Date(endIST.getTime() - istOffsetMs);
-  
-  return { start: startUTC, end: endUTC };
+  let targetDateIST = new Date(now.getTime() + istOffsetMs);
+
+  if (params?.date) {
+    const parts = params.date.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        targetDateIST = new Date(Date.UTC(y, m, d, 12, 0, 0));
+      }
+    } else {
+      const parsed = new Date(params.date);
+      if (!isNaN(parsed.getTime())) {
+        targetDateIST = new Date(parsed.getTime() + istOffsetMs);
+      }
+    }
+  }
+
+  const year = targetDateIST.getUTCFullYear();
+  const month = targetDateIST.getUTCMonth();
+  const date = targetDateIST.getUTCDate();
+
+  // Target Date boundaries in IST (converted to UTC)
+  const targetStartIST = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+  const targetStartUTC = new Date(targetStartIST.getTime() - istOffsetMs);
+  const targetEndIST = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
+  const targetEndUTC = new Date(targetEndIST.getTime() - istOffsetMs);
+
+  // Yesterday relative to target date
+  const yesterdayStartIST = new Date(Date.UTC(year, month, date - 1, 0, 0, 0, 0));
+  const yesterdayStartUTC = new Date(yesterdayStartIST.getTime() - istOffsetMs);
+  const yesterdayEndIST = new Date(Date.UTC(year, month, date - 1, 23, 59, 59, 999));
+  const yesterdayEndUTC = new Date(yesterdayEndIST.getTime() - istOffsetMs);
+
+  // Day before yesterday relative to target date
+  const dbyStartIST = new Date(Date.UTC(year, month, date - 2, 0, 0, 0, 0));
+  const dbyStartUTC = new Date(dbyStartIST.getTime() - istOffsetMs);
+  const dbyEndIST = new Date(Date.UTC(year, month, date - 2, 23, 59, 59, 999));
+  const dbyEndUTC = new Date(dbyEndIST.getTime() - istOffsetMs);
+
+  // Period range calculation
+  let periodStartUTC = targetStartUTC;
+  let periodEndUTC = targetEndUTC;
+  const period = params?.period || "today";
+
+  if (period === "week") {
+    const day = targetDateIST.getUTCDay();
+    const diff = targetDateIST.getUTCDate() - day + (day === 0 ? -6 : 1);
+    const weekStartIST = new Date(Date.UTC(year, month, diff, 0, 0, 0, 0));
+    periodStartUTC = new Date(weekStartIST.getTime() - istOffsetMs);
+    const weekEndIST = new Date(Date.UTC(year, month, diff + 6, 23, 59, 59, 999));
+    periodEndUTC = new Date(weekEndIST.getTime() - istOffsetMs);
+  } else if (period === "month") {
+    const monthStartIST = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    periodStartUTC = new Date(monthStartIST.getTime() - istOffsetMs);
+    const monthEndIST = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+    periodEndUTC = new Date(monthEndIST.getTime() - istOffsetMs);
+  } else if (period === "year") {
+    const yearStartIST = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+    periodStartUTC = new Date(yearStartIST.getTime() - istOffsetMs);
+    const yearEndIST = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+    periodEndUTC = new Date(yearEndIST.getTime() - istOffsetMs);
+  }
+
+  return {
+    targetDate: { start: targetStartUTC, end: targetEndUTC },
+    yesterday: { start: yesterdayStartUTC, end: yesterdayEndUTC },
+    dayBeforeYesterday: { start: dbyStartUTC, end: dbyEndUTC },
+    period: { start: periodStartUTC, end: periodEndUTC }
+  };
 }
 
 export interface CallerPerformanceMetrics {
@@ -49,12 +111,22 @@ export interface CallerPerformanceMetrics {
     note: string;
     createdAt: Date;
   }>;
+  // New filtered fields
+  assignedPeriod: number;
+  calledPeriod: number;
+  callsPeriod: number;
+  callsTargetDate: number;
+  callsYesterday: number;
+  callsDayBeforeYesterday: number;
 }
 
 /**
  * Action to fetch performance metrics for a specific caller.
  */
-export async function getCallerPerformanceAction(callerId: string): Promise<{
+export async function getCallerPerformanceAction(
+  callerId: string,
+  params?: PerformanceFilterParams
+): Promise<{
   success: boolean;
   error?: string;
   metrics?: CallerPerformanceMetrics;
@@ -78,7 +150,7 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
       return { success: false, error: "Caller not found." };
     }
 
-    const { start: todayStart, end: todayEnd } = getISTTodayRange();
+    const { targetDate, yesterday, dayBeforeYesterday, period } = getISTRange(params);
 
     const terminalStatuses = [
       LeadStatus.CUSTOMER,
@@ -107,9 +179,18 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
       totalLeadsCount, totalUploadedCount,
       activeLeadsCount, activeUploadedCount,
       calledLeadsCount, calledUploadedCount,
-      assignedTodayLeads, assignedTodayUploaded,
-      calledTodayLeads, calledTodayUploaded,
-      callsTodayCount, totalCallsCount
+      
+      assignedTargetLeads, assignedTargetUploaded,
+      calledTargetLeads, calledTargetUploaded,
+      
+      assignedPeriodLeads, assignedPeriodUploaded,
+      calledPeriodLeads, calledPeriodUploaded,
+      
+      callsTargetCount,
+      callsYesterdayCount,
+      callsDbyCount,
+      callsPeriodCount,
+      totalCallsCount
     ] = await Promise.all([
       // Total Assigned
       Lead.countDocuments({ assignedTo: callerId }),
@@ -123,16 +204,33 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
       Lead.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
       UploadedLead.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
       
-      // Assigned Today
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd } }),
+      // Assigned on Target Date
+      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
       
-      // Assigned Today and called (status != NEW)
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd }, status: { $ne: LeadStatus.NEW } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd }, status: { $ne: LeadStatus.NEW } }),
+      // Assigned on Target Date and called (status != NEW)
+      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
+      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
       
-      // Calls today
-      Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: todayStart, $lte: todayEnd } }),
+      // Assigned in Period
+      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+      
+      // Assigned in Period and called
+      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+      
+      // Calls on Target Date
+      Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+      
+      // Calls Yesterday
+      Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: yesterday.start, $lte: yesterday.end } }),
+      
+      // Calls Day Before Yesterday
+      Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: dayBeforeYesterday.start, $lte: dayBeforeYesterday.end } }),
+      
+      // Calls in Period
+      Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: period.start, $lte: period.end } }),
       
       // Total calls logged all time
       Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes } })
@@ -150,13 +248,13 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
       })
     );
 
-    // Recent activities today
+    // Recent activities during selected period
     const activitiesRaw = await Activity.find({
       userId: callerId,
-      createdAt: { $gte: todayStart, $lte: todayEnd }
+      createdAt: { $gte: period.start, $lte: period.end }
     })
       .sort({ createdAt: -1 })
-      .limit(15)
+      .limit(30)
       .lean();
 
     // Map lead details onto the activities logs (querying concurrently)
@@ -166,10 +264,8 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
         let leadPhone = "";
         
         if (act.leadId) {
-          // Attempt leads collection
           let leadDoc = await Lead.findById(act.leadId).select("name phone").lean();
           if (!leadDoc) {
-            // Attempt uploaded_leads collection
             leadDoc = await UploadedLead.findById(act.leadId).select("name phone").lean();
           }
           if (leadDoc) {
@@ -196,12 +292,20 @@ export async function getCallerPerformanceAction(callerId: string): Promise<{
         totalAssigned: totalLeadsCount + totalUploadedCount,
         activeLeads: activeLeadsCount + activeUploadedCount,
         actionedLeads: calledLeadsCount + calledUploadedCount,
-        assignedToday: assignedTodayLeads + assignedTodayUploaded,
-        calledToday: calledTodayLeads + calledTodayUploaded,
-        callsToday: callsTodayCount,
+        // Old fields map to target date metrics
+        assignedToday: assignedTargetLeads + assignedTargetUploaded,
+        calledToday: calledTargetLeads + calledTargetUploaded,
+        callsToday: callsTargetCount,
         totalCalls: totalCallsCount,
         statusBreakdown,
-        recentActivities
+        recentActivities,
+        // New period metrics
+        assignedPeriod: assignedPeriodLeads + assignedPeriodUploaded,
+        calledPeriod: calledPeriodLeads + calledPeriodUploaded,
+        callsPeriod: callsPeriodCount,
+        callsTargetDate: callsTargetCount,
+        callsYesterday: callsYesterdayCount,
+        callsDayBeforeYesterday: callsDbyCount
       }
     };
   } catch (error) {
@@ -219,12 +323,21 @@ export interface CallerSummaryItem {
   assignedToday: number;
   calledToday: number;
   callsToday: number;
+  // New filtered fields
+  assignedPeriod: number;
+  calledPeriod: number;
+  callsPeriod: number;
+  callsTargetDate: number;
+  callsYesterday: number;
+  callsDayBeforeYesterday: number;
 }
 
 /**
  * Action to fetch summary metrics of all active callers in the system.
  */
-export async function getAllCallersPerformanceSummaryAction(): Promise<{
+export async function getAllCallersPerformanceSummaryAction(
+  params?: PerformanceFilterParams
+): Promise<{
   success: boolean;
   error?: string;
   callers?: CallerSummaryItem[];
@@ -247,7 +360,7 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
       .sort({ name: 1 })
       .lean();
 
-    const { start: todayStart, end: todayEnd } = getISTTodayRange();
+    const { targetDate, yesterday, dayBeforeYesterday, period } = getISTRange(params);
 
     const terminalStatuses = [
       LeadStatus.CUSTOMER,
@@ -278,9 +391,17 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
         const [
           totalLeadsCount, totalUploadedCount,
           activeLeadsCount, activeUploadedCount,
-          assignedTodayLeads, assignedTodayUploaded,
-          calledTodayLeads, calledTodayUploaded,
-          callsTodayCount
+          
+          assignedTargetLeads, assignedTargetUploaded,
+          calledTargetLeads, calledTargetUploaded,
+          
+          assignedPeriodLeads, assignedPeriodUploaded,
+          calledPeriodLeads, calledPeriodUploaded,
+          
+          callsTargetCount,
+          callsYesterdayCount,
+          callsDbyCount,
+          callsPeriodCount
         ] = await Promise.all([
           // Total Assigned
           Lead.countDocuments({ assignedTo: callerId }),
@@ -290,16 +411,33 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
           Lead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
           UploadedLead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
           
-          // Assigned Today
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd } }),
+          // Assigned on Target Date
+          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
           
-          // Assigned Today and called (status != NEW)
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd }, status: { $ne: LeadStatus.NEW } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: todayStart, $lte: todayEnd }, status: { $ne: LeadStatus.NEW } }),
+          // Assigned on Target and called
+          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
+          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
           
-          // Calls today
-          Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: todayStart, $lte: todayEnd } }),
+          // Assigned in Period
+          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+          
+          // Assigned in Period and called
+          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+          
+          // Calls on Target Date
+          Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+          
+          // Calls Yesterday
+          Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: yesterday.start, $lte: yesterday.end } }),
+          
+          // Calls Day Before Yesterday
+          Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: dayBeforeYesterday.start, $lte: dayBeforeYesterday.end } }),
+          
+          // Calls in Period
+          Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: period.start, $lte: period.end } })
         ]);
 
         return {
@@ -308,9 +446,17 @@ export async function getAllCallersPerformanceSummaryAction(): Promise<{
           email: u.email,
           totalAssigned: totalLeadsCount + totalUploadedCount,
           activeLeads: activeLeadsCount + activeUploadedCount,
-          assignedToday: assignedTodayLeads + assignedTodayUploaded,
-          calledToday: calledTodayLeads + calledTodayUploaded,
-          callsToday: callsTodayCount
+          // Old fields map to target date metrics
+          assignedToday: assignedTargetLeads + assignedTargetUploaded,
+          calledToday: calledTargetLeads + calledTargetUploaded,
+          callsToday: callsTargetCount,
+          // New period metrics
+          assignedPeriod: assignedPeriodLeads + assignedPeriodUploaded,
+          calledPeriod: calledPeriodLeads + calledPeriodUploaded,
+          callsPeriod: callsPeriodCount,
+          callsTargetDate: callsTargetCount,
+          callsYesterday: callsYesterdayCount,
+          callsDayBeforeYesterday: callsDbyCount
         };
       })
     );
