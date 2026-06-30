@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useRef, useTransition } from "react";
 import {
   getLocalityList,
   getProjectsForLocality,
@@ -30,8 +30,8 @@ interface GpsCollectorClientProps {
 }
 
 export default function GpsCollectorClient({ userName }: GpsCollectorClientProps) {
-  // Search Mode: 'gps' (Auto locator) or 'manual' (Simple sector search)
-  const [searchMode, setSearchMode] = useState<"gps" | "manual">("gps");
+  // GPS switch state (ON = GPS search is active, OFF = GPS search is disabled completely)
+  const [gpsActive, setGpsActive] = useState<boolean>(true);
 
   // Collect state
   const [localities, setLocalities] = useState<string[]>([]);
@@ -55,6 +55,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [photos, setPhotos] = useState<{ id: string; file: File; preview: string; base64: string }[]>([]);
   const [notes, setNotes] = useState<string>("");
 
+  // Search box click-outside ref
+  const searchRef = useRef<HTMLDivElement>(null);
+
   // General loading/error
   const [isPending, startTransition] = useTransition();
   const [uploadStatus, setUploadStatus] = useState<string>("");
@@ -73,13 +76,26 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     });
   }, []);
 
-  // AUTO-GPS TRIGGER: Auto-capture location on load if in GPS mode
+  // AUTO-GPS TRIGGER: Auto-capture location on load if GPS switch is ON
   useEffect(() => {
-    if (localities.length > 0 && searchMode === "gps") {
+    if (localities.length > 0 && gpsActive) {
       autoCaptureGps();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localities, searchMode]);
+  }, [localities, gpsActive]);
+
+  // Click outside to close recommendations dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Fetch projects when locality changes
   useEffect(() => {
@@ -167,7 +183,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
   // Helper to trigger GPS location capture automatically
   const autoCaptureGps = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !gpsActive) return;
     
     setIsCapturingGps(true);
     navigator.geolocation.getCurrentPosition(
@@ -366,7 +382,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
   // Calculate distance from current position to selected locality
   const getSelectedLocalityDistanceStr = () => {
-    if (searchMode !== "gps" || !latitude || !longitude || !selectedLocality) return "";
+    if (!gpsActive || !latitude || !longitude || !selectedLocality) return "";
     const coords = getLocalityCoordinates(selectedLocality);
     const dist = calculateDistance(latitude, longitude, coords.lat, coords.lng);
     return formatDistance(dist);
@@ -395,44 +411,47 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         <div className={`lg:col-span-5 ${selectedProject ? "hidden lg:block" : "block"}`}>
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs">
             
-            {/* Segmentation Toggle Pill */}
-            <div className="flex bg-slate-150/70 p-1.5 rounded-xl mb-5 border border-slate-200/60 max-w-full">
+            {/* GPS Toggle Switch (ON / OFF) */}
+            <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-5 shadow-2xs">
+              <div className="flex flex-col gap-0.5 pr-2">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  📡 GPS Auto-Locator
+                </span>
+                <span className="text-[10px] text-slate-500 leading-normal">
+                  Auto-detect nearest sector center on load.
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => {
-                  setSearchMode("gps");
-                  setLatitude(null);
-                  setLongitude(null);
-                  setSelectedLocality("");
-                  setSearchLocality("");
-                  setProjects([]);
-                  autoCaptureGps();
+                  const nextState = !gpsActive;
+                  setGpsActive(nextState);
+                  if (nextState) {
+                    autoCaptureGps();
+                  } else {
+                    // Turn OFF: 0 consumption and clear all coordinates
+                    setLatitude(null);
+                    setLongitude(null);
+                    setGpsAccuracy(null);
+                    setSelectedLocality("");
+                    setSearchLocality("");
+                    setProjects([]);
+                  }
                 }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-150 text-center cursor-pointer ${
-                  searchMode === "gps"
-                    ? "bg-white text-indigo-700 shadow-2xs font-extrabold"
-                    : "text-slate-500 hover:text-slate-700"
+                className={`relative inline-flex h-6.5 w-13 flex-shrink-0 items-center rounded-full transition-colors duration-250 cursor-pointer outline-none border-0 ${
+                  gpsActive ? "bg-indigo-650" : "bg-slate-300"
                 }`}
               >
-                📡 Near Me (GPS)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchMode("manual");
-                  setLatitude(null);
-                  setLongitude(null);
-                  setSelectedLocality("");
-                  setSearchLocality("");
-                  setProjects([]);
-                }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-150 text-center cursor-pointer ${
-                  searchMode === "manual"
-                    ? "bg-white text-indigo-700 shadow-2xs font-extrabold"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                🔍 Manual Search
+                <span className={`text-[8.5px] font-black text-white absolute transition-all duration-200 ${
+                  gpsActive ? "left-2.5" : "right-2.5"
+                }`}>
+                  {gpsActive ? "ON" : "OFF"}
+                </span>
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    gpsActive ? "translate-x-7" : "translate-x-1"
+                  }`}
+                />
               </button>
             </div>
 
@@ -440,11 +459,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               📍 Locality Finder
             </h2>
             
-            {/* Custom Locality Autocomplete Search */}
-            <div className="relative mt-3 z-30">
+            {/* Autocomplete Search input container with click-outside ref */}
+            <div ref={searchRef} className="relative mt-3 z-30">
               <input
                 type="text"
-                placeholder={searchMode === "gps" ? "Locating nearest sector automatically..." : "Type sector/locality manually..."}
+                placeholder={gpsActive ? "Locating nearest sector..." : "Type sector/locality manually..."}
                 value={searchLocality}
                 onChange={(e) => {
                   setSearchLocality(e.target.value);
@@ -457,7 +476,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               {isDropdownOpen && filteredLocalities.length > 0 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
                   {filteredLocalities.map((loc) => {
-                    const hasGPS = searchMode === "gps" && latitude !== null && longitude !== null;
+                    const hasGPS = gpsActive && latitude !== null && longitude !== null;
                     let distanceStr = "";
                     if (hasGPS) {
                       const coords = getLocalityCoordinates(loc);
@@ -470,7 +489,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                         onClick={() => {
                           setSelectedLocality(loc);
                           setSearchLocality(loc);
-                          setIsDropdownOpen(false);
+                          setIsDropdownOpen(false); // Close dropdown recommendations immediately on click
                         }}
                         className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center ${
                           selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
@@ -492,7 +511,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
                     Projects in {selectedLocality}
                   </span>
-                  {searchMode === "gps" && latitude && longitude && getSelectedLocalityDistanceStr() && (
+                  {gpsActive && latitude && longitude && getSelectedLocalityDistanceStr() && (
                     <span className="text-[10px] text-indigo-650 font-bold font-mono">
                       📍 {getSelectedLocalityDistanceStr()}
                     </span>
@@ -507,13 +526,13 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             {/* Projects List (paginated to show 10 at a time) */}
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
               {!selectedLocality ? (
-                // Display placeholder depending on selected Search Mode
-                searchMode === "gps" ? (
+                // Display placeholder depending on GPS state
+                gpsActive ? (
                   <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
                     <span className="text-3xl animate-pulse">📡</span>
                     <h4 className="font-bold text-slate-750 text-sm">Location Not Active</h4>
                     <p className="text-[11px] text-slate-450 max-w-[240px] mx-auto leading-relaxed">
-                      Please enable GPS/location services on your device to automatically load nearby projects, or choose <strong>Manual Search</strong>.
+                      Please enable GPS/location services on your device to automatically load nearby projects, or toggle GPS <strong>OFF</strong> to search manually.
                     </p>
                   </div>
                 ) : (
@@ -545,7 +564,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                       <div className="space-y-0.5 pr-3 flex-1 min-w-0">
                         <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
                         <p className="text-slate-500 text-xs truncate">
-                          {proj.location} {searchMode === "gps" && latitude && longitude && getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
+                          {proj.location} {gpsActive && latitude && longitude && getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
                         </p>
                       </div>
                       <span
