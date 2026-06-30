@@ -66,6 +66,23 @@ export async function getProjectsForLocality(locality: string) {
 }
 
 /**
+ * Fetch all projects from the .com site.
+ */
+export async function getAllProjects() {
+  try {
+    const result = await callComApi(
+      "/api/field-collector/projects",
+      { cache: "no-store" }
+    );
+    return result.projects || [];
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Error fetching all projects from .com API:", err);
+    throw new Error(err.message || "Failed to load projects from .com backend.");
+  }
+}
+
+/**
  * Sends coordinates and raw base64 photos to the .com API to save to the database.
  */
 export async function updateProjectGpsAndPhotos(

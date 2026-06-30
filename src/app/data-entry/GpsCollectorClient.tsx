@@ -6,6 +6,7 @@ import {
   getProjectsForLocality,
   updateProjectGpsAndPhotos,
   searchProjectsByName,
+  getAllProjects,
 } from "@/app/actions/gps-collector";
 import {
   getLocalityCoordinates,
@@ -227,6 +228,32 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     localStorage.removeItem(`gps_draft_${projectId}`);
   };
 
+  // Helper to load nearby projects sorted by distance
+  const loadNearbyProjects = (lat: number, lng: number) => {
+    startTransition(async () => {
+      try {
+        const allProjs = await getAllProjects();
+        // Calculate distance for each project based on its locality/sector coordinates
+        const withDistance = allProjs.map((proj: ProjectItem) => {
+          const coords = getLocalityCoordinates(proj.locality);
+          const dist = calculateDistance(lat, lng, coords.lat, coords.lng);
+          return { ...proj, distance: dist };
+        });
+        // Sort from nearest to farthest, then alphabetically
+        withDistance.sort((a: any, b: any) => {
+          if (a.distance !== b.distance) {
+            return a.distance - b.distance;
+          }
+          return a.projectName.localeCompare(b.projectName);
+        });
+        setProjects(withDistance);
+      } catch (e) {
+        console.error("Failed to load nearby projects:", e);
+        setErrorMessage("Failed to load nearby projects.");
+      }
+    });
+  };
+
   // Helper to trigger GPS location capture automatically
   const autoCaptureGps = () => {
     if (!navigator.geolocation || !gpsActive) return;
@@ -241,24 +268,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setGpsAccuracy(position.coords.accuracy);
         setIsCapturingGps(false);
 
-        // Find and select closest locality automatically
-        if (localities.length > 0) {
-          let closestLoc = localities[0];
-          let minDistance = Infinity;
-
-          localities.forEach((loc) => {
-            const locCoords = getLocalityCoordinates(loc);
-            const dist = calculateDistance(lat, lng, locCoords.lat, locCoords.lng);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestLoc = loc;
-            }
-          });
-
-          if (closestLoc) {
-            setSelectedLocality(closestLoc);
-            setSearchLocality(closestLoc);
-          }
+        if (!selectedLocality) {
+          loadNearbyProjects(lat, lng);
         }
       },
       (error) => {
@@ -293,24 +304,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setGpsAccuracy(position.coords.accuracy);
         setIsCapturingGps(false);
 
-        // Auto-select nearest sector based on distance
-        if (localities.length > 0) {
-          let closestLoc = localities[0];
-          let minDistance = Infinity;
-
-          localities.forEach((loc) => {
-            const locCoords = getLocalityCoordinates(loc);
-            const dist = calculateDistance(lat, lng, locCoords.lat, locCoords.lng);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestLoc = loc;
-            }
-          });
-
-          if (closestLoc && closestLoc !== selectedLocality) {
-            setSelectedLocality(closestLoc);
-            setSearchLocality(closestLoc);
-          }
+        if (!selectedLocality) {
+          loadNearbyProjects(lat, lng);
         }
       },
       (error) => {
@@ -462,8 +457,17 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 placeholder={gpsActive ? "Search sector or project name..." : "Type sector or project name manually..."}
                 value={searchLocality}
                 onChange={(e) => {
-                  setSearchLocality(e.target.value);
-                  setIsDropdownOpen(true);
+                  const val = e.target.value;
+                  setSearchLocality(val);
+                  setIsDropdownOpen(val.trim().length >= 2);
+                  if (val.trim() === "") {
+                    setSelectedLocality("");
+                    if (gpsActive && latitude !== null && longitude !== null) {
+                      loadNearbyProjects(latitude, longitude);
+                    } else {
+                      setProjects([]);
+                    }
+                  }
                 }}
                 onFocus={() => setIsDropdownOpen(true)}
                 className="w-full bg-white border border-slate-350 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 placeholder-slate-400 shadow-2xs"
@@ -560,11 +564,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             </div>
 
             {/* Total count details */}
-            {selectedLocality && (
+            {(selectedLocality || (gpsActive && latitude && longitude)) && (
               <div className="flex justify-between items-center mt-6 mb-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
-                    Projects in {selectedLocality}
+                    {selectedLocality ? `Projects in ${selectedLocality}` : "Nearest Pending Projects"}
                   </span>
                 </div>
                 <span className="text-[11px] bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 font-medium self-start">
@@ -575,7 +579,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
             {/* Projects List (paginated to show 10 at a time) */}
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-              {!selectedLocality ? (
+              {!selectedLocality && (!gpsActive || !latitude || !longitude) ? (
                 // Display placeholder depending on GPS state
                 gpsActive ? (
                   <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
@@ -598,36 +602,45 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 <>
                   {projects.length === 0 && (
                     <div className="text-center py-10 text-slate-400 text-sm">
-                      No projects found in this locality.
+                      No projects found.
                     </div>
                   )}
-                  {projects.slice(0, visibleCount).map((proj) => (
-                    <div
-                      key={proj._id}
-                      onClick={() => setSelectedProject(proj)}
-                      className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center ${
-                        selectedProject?._id === proj._id
-                          ? "bg-indigo-50/50 border-indigo-400 shadow-2xs"
-                          : "bg-white border-slate-200 hover:bg-slate-50/50 hover:border-slate-350"
-                      }`}
-                    >
-                      <div className="space-y-0.5 pr-3 flex-1 min-w-0">
-                        <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
-                        <p className="text-slate-500 text-xs truncate">
-                          {proj.location} {gpsActive && latitude && longitude && getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
-                          proj.isCompleted
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
-                            : "bg-amber-50 text-amber-700 border border-amber-250"
+                  {projects.slice(0, visibleCount).map((proj) => {
+                    const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                    let distanceStr = "";
+                    if (hasGPS) {
+                      const coords = getLocalityCoordinates(proj.locality);
+                      const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                      distanceStr = `• ~${dist.toFixed(1)} km away`;
+                    }
+                    return (
+                      <div
+                        key={proj._id}
+                        onClick={() => setSelectedProject(proj)}
+                        className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center ${
+                          selectedProject?._id === proj._id
+                            ? "bg-indigo-50/50 border-indigo-400 shadow-2xs"
+                            : "bg-white border-slate-200 hover:bg-slate-50/50 hover:border-slate-350"
                         }`}
                       >
-                        {proj.isCompleted ? "🟢 Completed" : "🟡 Pending"}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="space-y-0.5 pr-3 flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
+                          <p className="text-slate-500 text-xs truncate">
+                            {proj.locality} {proj.location && `• ${proj.location}`} {distanceStr}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
+                            proj.isCompleted
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
+                              : "bg-amber-50 text-amber-700 border border-amber-250"
+                          }`}
+                        >
+                          {proj.isCompleted ? "🟢 Completed" : "🟡 Pending"}
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {/* View More Button */}
                   {projects.length > visibleCount && (
