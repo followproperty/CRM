@@ -439,7 +439,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   );
 
   return (
-    <div className="bg-slate-50 text-slate-800 p-3 md:p-6 pb-20 font-sans min-h-[85vh]">
+    <div className="bg-slate-50 text-slate-800 p-0 pb-10 font-sans min-h-[85vh]">
       {/* General Error Banner */}
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 text-rose-750 p-3.5 rounded-xl text-xs font-semibold mb-6">
@@ -473,7 +473,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 <ul className="absolute left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
                   {isSearching ? (
                     <li className="px-4 py-4 text-xs text-slate-500 text-center flex items-center justify-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-indigo-650/30 border-t-indigo-650 rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
                       Searching database...
                     </li>
                   ) : searchedProjects.length > 0 ? (
@@ -650,12 +650,12 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
           {selectedProject ? (
             <form
               onSubmit={handleSubmit}
-              className="bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-xs space-y-6 flex flex-col min-h-[550px]"
+              className="bg-white border border-slate-200 rounded-2xl p-3 md:p-6 shadow-xs space-y-6 flex flex-col min-h-[550px]"
             >
               {/* Form Header */}
               <div className="flex justify-between items-start border-b border-slate-100 pb-4">
                 <div className="space-y-1 min-w-0 flex-1 pr-3">
-                  <span className="text-[9px] uppercase font-extrabold tracking-widest text-indigo-650">
+                  <span className="text-[9px] uppercase font-extrabold tracking-widest text-indigo-600">
                     Active Ingestion Form
                   </span>
                   <h2 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight truncate">
@@ -723,7 +723,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   type="button"
                   onClick={captureGps}
                   disabled={isCapturingGps}
-                  className="w-full bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-3.5 px-4 rounded-xl text-xs md:text-sm transition-all duration-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl text-xs md:text-sm transition-all duration-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCapturingGps ? (
                     <>
@@ -819,7 +819,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 <button
                   type="submit"
                   disabled={isPending || !latitude || !longitude || photos.length < 4}
-                  className="w-full bg-emerald-650 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-xl text-xs md:text-sm transition-all duration-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-xl text-xs md:text-sm transition-all duration-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isPending ? (
                     <>
