@@ -59,10 +59,16 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   // Pagination state (limit to 10 by default)
   const [visibleCount, setVisibleCount] = useState<number>(10);
 
-  // GPS state
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  // Decoupled GPS States:
+  // 1. User Position (Strictly for distance sorting and proximity checks)
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+
+  // 2. Form Coordinates (Strictly captured for submission / drafts)
+  const [formLat, setFormLat] = useState<number | null>(null);
+  const [formLng, setFormLng] = useState<number | null>(null);
+  const [formAccuracy, setFormAccuracy] = useState<number | null>(null);
+
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState<boolean>(false);
 
@@ -158,7 +164,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       setSelectedProject(null);
     }
     
-    clearPhotosAndNotes(); // Clear photos/notes, but preserve coordinates if we have locked them
+    clearPhotosAndNotes(); // Clear photos/notes
     setVisibleCount(10); // Reset pagination limit to 10
 
     startTransition(async () => {
@@ -182,9 +188,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       try {
         const draft = JSON.parse(savedDraft);
         if (draft.latitude && draft.longitude) {
-          setLatitude(draft.latitude);
-          setLongitude(draft.longitude);
-          setGpsAccuracy(draft.gpsAccuracy || null);
+          setFormLat(draft.latitude);
+          setFormLng(draft.longitude);
+          setFormAccuracy(draft.gpsAccuracy || null);
         }
         setNotes(draft.notes || "");
         setPhotos(draft.photos || []);
@@ -192,9 +198,10 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         console.error("Error parsing saved draft", e);
       }
     } else {
-      setLatitude(null);
-      setLongitude(null);
-      setGpsAccuracy(null);
+      // Clear coordinate form inputs by default
+      setFormLat(null);
+      setFormLng(null);
+      setFormAccuracy(null);
       setNotes("");
       setPhotos([]);
     }
@@ -205,11 +212,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     if (!selectedProject) return;
 
     const draftKey = `gps_draft_${selectedProject._id}`;
-    if (latitude || longitude || photos.length > 0 || notes) {
+    if (formLat || formLng || photos.length > 0 || notes) {
       const draft = {
-        latitude,
-        longitude,
-        gpsAccuracy,
+        latitude: formLat,
+        longitude: formLng,
+        gpsAccuracy: formAccuracy,
         notes,
         photos,
       };
@@ -217,7 +224,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     } else {
       localStorage.removeItem(draftKey);
     }
-  }, [latitude, longitude, gpsAccuracy, photos, notes, selectedProject]);
+  }, [formLat, formLng, formAccuracy, photos, notes, selectedProject]);
 
   const clearPhotosAndNotes = () => {
     setPhotos([]);
@@ -227,9 +234,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   };
 
   const clearFullForm = () => {
-    setLatitude(null);
-    setLongitude(null);
-    setGpsAccuracy(null);
+    setFormLat(null);
+    setFormLng(null);
+    setFormAccuracy(null);
     setGpsError(null);
     setPhotos([]);
     setNotes("");
@@ -300,9 +307,10 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        setLatitude(lat);
-        setLongitude(lng);
-        setGpsAccuracy(position.coords.accuracy);
+        
+        // Update user coordinates strictly for sorting distances
+        setUserLat(lat);
+        setUserLng(lng);
         setIsCapturingGps(false);
 
         if (!selectedLocality) {
@@ -322,7 +330,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     );
   };
 
-  // Manual GPS capture / refresh coordinates
+  // Manual GPS capture / refresh coordinates inside the form
   const captureGps = () => {
     setIsCapturingGps(true);
     setGpsError(null);
@@ -337,9 +345,15 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        setLatitude(lat);
-        setLongitude(lng);
-        setGpsAccuracy(position.coords.accuracy);
+        
+        // Lock these coordinates strictly for the active ingestion form
+        setFormLat(lat);
+        setFormLng(lng);
+        setFormAccuracy(position.coords.accuracy);
+
+        // Also update user position to keep distance lists accurate
+        setUserLat(lat);
+        setUserLng(lng);
         setIsCapturingGps(false);
 
         if (!selectedLocality) {
@@ -413,7 +427,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     e.preventDefault();
     if (!selectedProject) return;
 
-    if (!latitude || !longitude) {
+    if (!formLat || !formLng) {
       setErrorMessage("Please capture the GPS coordinates first.");
       return;
     }
@@ -429,7 +443,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
     startTransition(async () => {
       try {
-        const gpsStr = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+        const gpsStr = `${formLat.toFixed(6)},${formLng.toFixed(6)}`;
         const base64Photos = photos.map((p) => p.base64);
         
         const result = await updateProjectGpsAndPhotos(selectedProject._id, gpsStr, base64Photos);
@@ -501,8 +515,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   setIsDropdownOpen(val.trim().length >= 2);
                   if (val.trim() === "") {
                     setSelectedLocality("");
-                    if (gpsActive && latitude !== null && longitude !== null) {
-                      loadNearbyProjects(latitude, longitude, 3);
+                    if (gpsActive && userLat !== null && userLng !== null) {
+                      loadNearbyProjects(userLat, userLng, 3);
                       setCurrentSectorLimit(3);
                     } else {
                       setProjects([]);
@@ -522,11 +536,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     </li>
                   ) : searchedProjects.length > 0 ? (
                     searchedProjects.map((proj) => {
-                      const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                      const hasGPS = gpsActive && userLat !== null && userLng !== null;
                       let distanceStr = "";
                       if (hasGPS && proj.locality) {
                         const coords = getLocalityCoordinates(proj.locality);
-                        const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                        const dist = calculateDistance(userLat!, userLng!, coords.lat, coords.lng);
                         distanceStr = `(~${dist.toFixed(1)} km away)`;
                       }
                       return (
@@ -583,9 +597,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     autoCaptureGps();
                   } else {
                     // Turn OFF: 0 consumption and clear all coordinates
-                    setLatitude(null);
-                    setLongitude(null);
-                    setGpsAccuracy(null);
+                    setUserLat(null);
+                    setUserLng(null);
+                    setFormLat(null);
+                    setFormLng(null);
+                    setFormAccuracy(null);
                     setSelectedLocality("");
                     setSearchLocality("");
                     setProjects([]);
@@ -605,7 +621,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             </div>
 
             {/* Total count details */}
-            {(selectedLocality || (gpsActive && latitude && longitude)) && (
+            {(selectedLocality || (gpsActive && userLat && userLng)) && (
               <div className="flex justify-between items-center mt-6 mb-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
@@ -629,7 +645,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     Analyzing Gurgaon sector distances and fetching projects closest to your position.
                   </p>
                 </div>
-              ) : !selectedLocality && (!gpsActive || !latitude || !longitude) ? (
+              ) : !selectedLocality && (!gpsActive || !userLat || !userLng) ? (
                 // Display placeholder depending on GPS state
                 gpsActive ? (
                   <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
@@ -656,11 +672,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     </div>
                   )}
                   {projects.slice(0, selectedLocality ? visibleCount : projects.length).map((proj) => {
-                    const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                    const hasGPS = gpsActive && userLat !== null && userLng !== null;
                     let distanceStr = "";
                     if (hasGPS) {
                       const coords = getLocalityCoordinates(proj.locality);
-                      const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                      const dist = calculateDistance(userLat!, userLng!, coords.lat, coords.lng);
                       distanceStr = `~${dist.toFixed(1)} km away`;
                     }
                     const showLocation = proj.location && proj.location.toLowerCase() !== proj.locality.toLowerCase();
@@ -710,8 +726,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                         } else {
                           const nextLimit = currentSectorLimit + 3;
                           setCurrentSectorLimit(nextLimit);
-                          if (latitude && longitude) {
-                            loadNearbyProjects(latitude, longitude, nextLimit);
+                          if (userLat && userLng) {
+                            loadNearbyProjects(userLat, userLng, nextLimit);
                           }
                         }
                       }}
@@ -774,17 +790,17 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   1. High-Accuracy Location Coordinate
                 </h3>
                 
-                {latitude && longitude ? (
+                {formLat && formLng ? (
                   <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center">
                     <p className="text-[9px] text-indigo-600 uppercase font-bold tracking-wider">
                       Current Coordinates Locked
                     </p>
                     <p className="text-base md:text-lg font-mono font-bold text-indigo-700 mt-1">
-                      {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                      {formLat.toFixed(6)}, {formLng.toFixed(6)}
                     </p>
-                    {gpsAccuracy && (
+                    {formAccuracy && (
                       <p className="text-[11px] text-emerald-600 font-semibold mt-1">
-                        Accuracy: ±{gpsAccuracy.toFixed(1)} meters
+                        Accuracy: ±{formAccuracy.toFixed(1)} meters
                       </p>
                     )}
                   </div>
@@ -805,7 +821,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Locking GPS signal...
                     </>
-                  ) : latitude && longitude ? (
+                  ) : formLat && formLng ? (
                     <>🔄 Recapture GPS Location</>
                   ) : (
                     <>📍 Capture Current GPS Location</>
@@ -895,7 +911,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               <div className="pt-2 mt-auto">
                 <button
                   type="submit"
-                  disabled={isPending || !latitude || !longitude || photos.length < 4}
+                  disabled={isPending || !formLat || !formLng || photos.length < 4}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-4 rounded-xl text-xs md:text-sm transition-all duration-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isPending ? (
