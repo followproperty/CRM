@@ -789,8 +789,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     )}
                   </div>
                 ) : (
-                  <div className="border border-dashed border-slate-300 rounded-xl py-6 text-center text-slate-400 text-xs md:text-sm bg-white">
-                    {isCapturingGps ? "Auto-capturing GPS position..." : "No coordinates locked yet. Use the capture button below."}
+                  <div className="border border-dashed border-slate-350 rounded-xl py-6 px-4 text-center text-slate-500 text-xs md:text-sm bg-white leading-relaxed">
+                    📍 <strong>Stand close to the building:</strong> Move within 2m to 10m of the main entrance or building facade, then tap the button below to capture coordinates.
                   </div>
                 )}
 
@@ -805,6 +805,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Locking GPS signal...
                     </>
+                  ) : latitude && longitude ? (
+                    <>🔄 Recapture GPS Location</>
                   ) : (
                     <>📍 Capture Current GPS Location</>
                   )}
