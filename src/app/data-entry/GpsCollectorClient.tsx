@@ -394,11 +394,6 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
   return (
     <div className="bg-slate-50 text-slate-800 p-3 md:p-6 pb-20 font-sans min-h-[85vh]">
-      {/* Geotag Reminder Banner with Simple Dynamic Greeting */}
-      <div className="bg-slate-100 border border-slate-200 rounded-xl p-3.5 mb-6 text-slate-700 text-xs shadow-2xs">
-        💡 Hi <strong>{userName}</strong>, please make sure <strong>Camera Location (Geotagging)</strong> is turned ON in your phone settings so photos save GPS coordinates.
-      </div>
-
       {/* General Error Banner */}
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 text-rose-750 p-3.5 rounded-xl text-xs font-semibold mb-6">
@@ -439,11 +434,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   }
                 }}
                 className={`relative inline-flex h-6.5 w-13 flex-shrink-0 items-center rounded-full transition-colors duration-250 cursor-pointer outline-none border-0 ${
-                  gpsActive ? "bg-indigo-650" : "bg-slate-300"
+                  gpsActive ? "bg-indigo-650" : "bg-slate-400"
                 }`}
               >
-                <span className={`text-[8.5px] font-black text-white absolute transition-all duration-200 ${
-                  gpsActive ? "left-2.5" : "right-2.5"
+                <span className={`text-[8.5px] font-black absolute transition-all duration-200 ${
+                  gpsActive ? "left-2.5 text-white" : "right-2.5 text-slate-800"
                 }`}>
                   {gpsActive ? "ON" : "OFF"}
                 </span>
@@ -511,11 +506,6 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
                     Projects in {selectedLocality}
                   </span>
-                  {gpsActive && latitude && longitude && getSelectedLocalityDistanceStr() && (
-                    <span className="text-[10px] text-indigo-650 font-bold font-mono">
-                      📍 {getSelectedLocalityDistanceStr()}
-                    </span>
-                  )}
                 </div>
                 <span className="text-[11px] bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 font-medium self-start">
                   {projects.filter((p) => p.isCompleted).length} / {projects.length} Done
