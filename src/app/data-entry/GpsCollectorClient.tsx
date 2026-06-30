@@ -939,6 +939,12 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 <p className="text-[10.5px] text-slate-450 mt-1 leading-snug">
                   * Capture at least 4 photos showing different angles, facades, or viewpoints of the property.
                 </p>
+                <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 flex items-start gap-2">
+                  <span className="text-[11px] shrink-0">💡</span>
+                  <p className="text-[9.5px] text-indigo-900 font-medium leading-relaxed">
+                    <strong>Important:</strong> Please ensure Location Tags / GPS location is enabled in your phone&apos;s Camera app settings. This embeds coordinate metadata directly inside the photo files for verification.
+                  </p>
+                </div>
               </div>
 
               {/* 3. Notes */}
