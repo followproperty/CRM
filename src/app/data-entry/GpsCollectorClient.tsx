@@ -76,7 +76,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
           setSelectedLocality(defaultLoc);
           setSearchLocality(defaultLoc);
         }
-      } catch (err) {
+      } catch {
         setErrorMessage("Failed to load localities from database.");
       }
     });
@@ -89,7 +89,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setStatsError(null);
         const data = await getFieldCollectorStats();
         setStats(data);
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error;
         setStatsError(err.message || "Failed to load performance metrics.");
       }
     });
@@ -112,7 +113,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       try {
         const data = await getProjectsForLocality(selectedLocality);
         setProjects(data);
-      } catch (err) {
+      } catch {
         setErrorMessage("Failed to load projects for this locality.");
       }
     });
@@ -296,7 +297,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
           clearEntryForm();
         }, 1500);
 
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error;
         setErrorMessage(err.message || "An error occurred during submission.");
       } finally {
         setUploadStatus("");
@@ -343,7 +345,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               <div>
                 <h4 className="font-bold text-amber-800 text-sm">Action Required: Geotag Verification</h4>
                 <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                  Hi <strong>{userName}</strong>, please ensure that <strong>Geotagging (Location Services)</strong> is enabled in your phone's native Camera settings. This will store the GPS coordinates inside the clicked images for backend verification.
+                  Hi <strong>{userName}</strong>, please ensure that <strong>Geotagging (Location Services)</strong> is enabled in your phone&apos;s native Camera settings. This will store the GPS coordinates inside the clicked images for backend verification.
                 </p>
               </div>
             </div>
