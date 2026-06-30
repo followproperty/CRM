@@ -73,7 +73,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [isCapturingGps, setIsCapturingGps] = useState<boolean>(false);
 
   // Photos state
-  const [photos, setPhotos] = useState<{ id: string; file: File; preview: string; base64: string }[]>([]);
+  const [photos, setPhotos] = useState<{ id: string; file: File; preview: string; base64: string; photoGps?: { lat: number; lng: number } | null }[]>([]);
   const [notes, setNotes] = useState<string>("");
 
   // Search box click-outside ref
@@ -219,7 +219,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         gpsAccuracy: formAccuracy,
         notes,
         // Map photos array to only save preview/base64 strings, excluding non-serializable File objects
-        photos: photos.map(p => ({ id: p.id, preview: p.preview, base64: p.base64 })),
+        photos: photos.map(p => ({ id: p.id, preview: p.preview, base64: p.base64, photoGps: p.photoGps })),
       };
       try {
         localStorage.setItem(draftKey, JSON.stringify(draft));
@@ -390,6 +390,126 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     );
   };
 
+  // Helper to extract GPS Coordinates directly from raw JPEG binary stream (without libraries)
+  const convertDMSToDD = (degrees: number, minutes: number, seconds: number, direction: string): number => {
+    let dd = degrees + minutes / 60 + seconds / 3600;
+    if (direction === "S" || direction === "W") {
+      dd = -dd;
+    }
+    return dd;
+  };
+
+  const readRationalArray = (view: DataView, offset: number, count: number, isLittleEndian: boolean): number[] => {
+    const result: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const numerator = view.getUint32(offset + i * 8, isLittleEndian);
+      const denominator = view.getUint32(offset + i * 8 + 4, isLittleEndian);
+      result.push(denominator === 0 ? 0 : numerator / denominator);
+    }
+    return result;
+  };
+
+  const readTiffData = (view: DataView, tiffOffset: number): { lat: number; lng: number } | null => {
+    const isLittleEndian = view.getUint16(tiffOffset) === 0x4949;
+    if (view.getUint16(tiffOffset + 2, isLittleEndian) !== 0x002A) {
+      return null;
+    }
+
+    const firstIFDOffset = view.getUint32(tiffOffset + 4, isLittleEndian);
+    const ifdOffset = tiffOffset + firstIFDOffset;
+
+    let gpsInfoOffset = 0;
+    const numEntries = view.getUint16(ifdOffset, isLittleEndian);
+    for (let i = 0; i < numEntries; i++) {
+      const entryOffset = ifdOffset + 2 + i * 12;
+      const tag = view.getUint16(entryOffset, isLittleEndian);
+      if (tag === 0x8825) { // GPS Info IFD Pointer
+        gpsInfoOffset = view.getUint32(entryOffset + 8, isLittleEndian);
+        break;
+      }
+    }
+
+    if (gpsInfoOffset === 0) return null;
+
+    const gpsOffset = tiffOffset + gpsInfoOffset;
+    const numGpsEntries = view.getUint16(gpsOffset, isLittleEndian);
+    
+    let latRef = "";
+    let latVal: number[] = [];
+    let lngRef = "";
+    let lngVal: number[] = [];
+
+    for (let i = 0; i < numGpsEntries; i++) {
+      const entryOffset = gpsOffset + 2 + i * 12;
+      const tag = view.getUint16(entryOffset, isLittleEndian);
+      const count = view.getUint32(entryOffset + 4, isLittleEndian);
+      const valueOffset = view.getUint32(entryOffset + 8, isLittleEndian);
+
+      if (tag === 1) { // GPSLatitudeRef
+        latRef = String.fromCharCode(view.getUint8(entryOffset + 8));
+      } else if (tag === 2) { // GPSLatitude
+        latVal = readRationalArray(view, tiffOffset + valueOffset, count, isLittleEndian);
+      } else if (tag === 3) { // GPSLongitudeRef
+        lngRef = String.fromCharCode(view.getUint8(entryOffset + 8));
+      } else if (tag === 4) { // GPSLongitude
+        lngVal = readRationalArray(view, tiffOffset + valueOffset, count, isLittleEndian);
+      }
+    }
+
+    if (latVal.length >= 3 && lngVal.length >= 3) {
+      const latitude = convertDMSToDD(latVal[0], latVal[1], latVal[2], latRef);
+      const longitude = convertDMSToDD(lngVal[0], lngVal[1], lngVal[2], lngRef);
+      return { lat: latitude, lng: longitude };
+    }
+
+    return null;
+  };
+
+  const parseGPSFromExif = (file: File): Promise<{ lat: number; lng: number } | null> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          const view = new DataView(buffer);
+          
+          if (view.getUint16(0) !== 0xFFD8) {
+            resolve(null);
+            return;
+          }
+
+          const length = view.byteLength;
+          let offset = 2;
+
+          while (offset < length) {
+            const marker = view.getUint16(offset);
+            if (marker === 0xFFE1) {
+              const app1Length = view.getUint16(offset + 2);
+              const exifHeader = view.getUint32(offset + 4);
+              if (exifHeader === 0x45786966) { // "Exif"
+                const tiffOffset = offset + 10;
+                const result = readTiffData(view, tiffOffset);
+                resolve(result);
+                return;
+              }
+              offset += 2 + app1Length;
+            } else {
+              if ((marker & 0xFF00) !== 0xFF00) {
+                break;
+              }
+              const segLength = view.getUint16(offset + 2);
+              offset += 2 + segLength;
+            }
+          }
+          resolve(null);
+        } catch {
+          resolve(null);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   // Compress image helper using HTML5 Canvas
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -452,6 +572,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       }
 
       try {
+        const exifGps = await parseGPSFromExif(file);
         const compressedBase64 = await compressImage(file);
         if (!compressedBase64) return;
         setPhotos((prev) => [
@@ -461,6 +582,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             file,
             preview: URL.createObjectURL(file),
             base64: compressedBase64,
+            photoGps: exifGps,
           },
         ]);
       } catch (err) {
@@ -502,8 +624,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       try {
         const gpsStr = `${formLat.toFixed(6)},${formLng.toFixed(6)}`;
         const base64Photos = photos.map((p) => p.base64);
+        const photoGpsList = photos
+          .map((p) => p.photoGps ? `${p.photoGps.lat.toFixed(6)},${p.photoGps.lng.toFixed(6)}` : "")
+          .filter(Boolean);
         
-        const result = await updateProjectGpsAndPhotos(selectedProject._id, gpsStr, base64Photos);
+        const result = await updateProjectGpsAndPhotos(selectedProject._id, gpsStr, base64Photos, photoGpsList);
 
         setProjects((prev) =>
           prev.map((proj) =>

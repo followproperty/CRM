@@ -88,7 +88,8 @@ export async function getAllProjects() {
 export async function updateProjectGpsAndPhotos(
   projectId: string,
   gps: string,
-  base64Photos: string[]
+  base64Photos: string[],
+  photoGps: string[] = []
 ) {
   try {
     const result = await callComApi("/api/field-collector/submit", {
@@ -100,6 +101,7 @@ export async function updateProjectGpsAndPhotos(
         projectId,
         gps: gps.trim(),
         photos: base64Photos,
+        photoGps,
       }),
     });
 
