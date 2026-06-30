@@ -1018,7 +1018,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     2. Add Building Photographs
                   </h3>
                   <span className="text-[11px] font-bold text-slate-600">
-                    {photos.length} / 5 Photos
+                    {photos.length} / 20 Photos
                   </span>
                 </div>
 
@@ -1045,7 +1045,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   ))}
 
                   {/* Add Photo Button */}
-                  {photos.length < 5 && (
+                  {photos.length < 20 && (
                     <label className="aspect-square border-2 border-dashed border-slate-350 hover:border-indigo-500 rounded-xl flex flex-col justify-center items-center gap-1 cursor-pointer bg-white hover:bg-slate-50 transition-colors">
                       <span className="text-xl text-slate-400">＋</span>
                       <span className="text-[10px] font-bold text-slate-450">Camera / File</span>
@@ -1108,7 +1108,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                       <span>{uploadStatus || "Updating records..."}</span>
                     </>
                   ) : (
-                    <>✓ Submit to .com Site Database</>
+                    <>✓ Submit to Database</>
                   )}
                 </button>
               </div>
