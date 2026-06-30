@@ -6,7 +6,6 @@ import {
   getProjectsForLocality,
   updateProjectGpsAndPhotos,
   searchProjectsByName,
-  getAllProjects,
 } from "@/app/actions/gps-collector";
 import {
   getLocalityCoordinates,
@@ -48,6 +47,10 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+
+  // GPS-based batch sector limit and loading states
+  const [currentSectorLimit, setCurrentSectorLimit] = useState<number>(3);
+  const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(false);
 
   // Global projects search state
   const [searchedProjects, setSearchedProjects] = useState<ProjectItem[]>([]);
@@ -236,16 +239,33 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   };
 
   // Helper to load nearby projects sorted by distance
-  const loadNearbyProjects = (lat: number, lng: number) => {
+  const loadNearbyProjects = (lat: number, lng: number, sectorLimit = 3) => {
+    if (localities.length === 0) return;
+    
+    setIsLoadingProjects(true);
+    setErrorMessage(null);
+
     startTransition(async () => {
       try {
-        const allProjs = await getAllProjects();
+        // Sort sectors by proximity to user
+        const sortedSectors = [...localities].map((loc) => {
+          const coords = getLocalityCoordinates(loc);
+          const dist = calculateDistance(lat, lng, coords.lat, coords.lng);
+          return { loc, dist };
+        }).sort((a, b) => a.dist - b.dist);
+
+        // Fetch projects for top closest sectors only to avoid heavy database payloads
+        const topSectors = sortedSectors.slice(0, sectorLimit).map((s) => s.loc);
+        const sectorsString = topSectors.join(",");
+        const data = await getProjectsForLocality(sectorsString);
+
         // Calculate distance for each project based on its locality/sector coordinates
-        const withDistance = allProjs.map((proj: ProjectItem) => {
+        const withDistance = data.map((proj: ProjectItem) => {
           const coords = getLocalityCoordinates(proj.locality);
           const dist = calculateDistance(lat, lng, coords.lat, coords.lng);
           return { ...proj, distance: dist };
         });
+
         // Sort from nearest to farthest, then alphabetically
         withDistance.sort((a: ProjectItem, b: ProjectItem) => {
           const distA = a.distance ?? 0;
@@ -255,10 +275,13 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
           }
           return a.projectName.localeCompare(b.projectName);
         });
+
         setProjects(withDistance);
       } catch (e) {
         console.error("Failed to load nearby projects:", e);
         setErrorMessage("Failed to load nearby projects.");
+      } finally {
+        setIsLoadingProjects(false);
       }
     });
   };
@@ -268,6 +291,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     if (!navigator.geolocation || !gpsActive) return;
     
     setIsCapturingGps(true);
+    setGpsError(null);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
@@ -278,11 +303,12 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setIsCapturingGps(false);
 
         if (!selectedLocality) {
-          loadNearbyProjects(lat, lng);
+          loadNearbyProjects(lat, lng, currentSectorLimit);
         }
       },
       (error) => {
         console.warn("Auto GPS capture warning:", error.message);
+        setGpsError("Could not retrieve GPS coordinates. Please enable device location settings.");
         setIsCapturingGps(false);
       },
       {
@@ -314,7 +340,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setIsCapturingGps(false);
 
         if (!selectedLocality) {
-          loadNearbyProjects(lat, lng);
+          loadNearbyProjects(lat, lng, currentSectorLimit);
         }
       },
       (error) => {
@@ -430,14 +456,25 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     });
   };
 
-
-
   return (
     <div className="bg-slate-50 text-slate-800 p-0 pb-10 font-sans min-h-[85vh]">
       {/* General Error Banner */}
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 text-rose-750 p-3.5 rounded-xl text-xs font-semibold mb-6">
           ⚠️ Error: {errorMessage}
+        </div>
+      )}
+
+      {/* GPS Error Toaster Alert */}
+      {gpsError && (
+        <div className="bg-amber-50 border border-amber-300 text-amber-950 p-4 rounded-2xl text-xs font-semibold mb-6 flex items-start gap-2.5 shadow-2xs">
+          <span className="text-sm">⚠️</span>
+          <div>
+            <p className="font-extrabold text-amber-950">Location Access Disabled</p>
+            <p className="text-[10px] text-amber-800 mt-1 leading-normal font-medium">
+              Please enable Location / GPS permissions in your browser or device settings to automatically load nearest projects, or turn GPS OFF to search manually.
+            </p>
+          </div>
         </div>
       )}
 
@@ -462,7 +499,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   if (val.trim() === "") {
                     setSelectedLocality("");
                     if (gpsActive && latitude !== null && longitude !== null) {
-                      loadNearbyProjects(latitude, longitude);
+                      loadNearbyProjects(latitude, longitude, 3);
+                      setCurrentSectorLimit(3);
                     } else {
                       setProjects([]);
                     }
@@ -503,7 +541,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                           <div className="flex flex-col pr-3">
                             <span className="font-semibold text-slate-800 text-xs sm:text-sm">🏢 {proj.projectName}</span>
                             <span className="text-[10px] text-slate-450 mt-1 font-medium">
-                              {proj.locality} {proj.location && `• ${proj.location}`}
+                              {proj.locality} {proj.location && proj.location.toLowerCase() !== proj.locality.toLowerCase() && `• ${proj.location}`}
                             </span>
                           </div>
                           {distanceStr && (
@@ -548,6 +586,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     setSelectedLocality("");
                     setSearchLocality("");
                     setProjects([]);
+                    setCurrentSectorLimit(3);
                   }
                 }}
                 className={`relative inline-flex h-5.5 w-10 flex-shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer outline-none border-0 ${
@@ -576,9 +615,18 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               </div>
             )}
 
-            {/* Projects List (paginated to show 10 at a time) */}
+            {/* Projects List (paginated or lazy loaded depending on GPS) */}
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-              {!selectedLocality && (!gpsActive || !latitude || !longitude) ? (
+              {isLoadingProjects ? (
+                // Dynamic Scanning GPS Proximity Loader
+                <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
+                  <div className="w-8 h-8 border-3 border-indigo-650/30 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+                  <h4 className="font-bold text-slate-750 text-xs">📡 Scanning Sector Proximity...</h4>
+                  <p className="text-[10.5px] text-slate-450 max-w-[220px] mx-auto leading-relaxed">
+                    Analyzing Gurgaon sector distances and fetching projects closest to your position.
+                  </p>
+                </div>
+              ) : !selectedLocality && (!gpsActive || !latitude || !longitude) ? (
                 // Display placeholder depending on GPS state
                 gpsActive ? (
                   <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
@@ -604,51 +652,69 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                       No projects found.
                     </div>
                   )}
-                  {projects.slice(0, visibleCount).map((proj) => {
+                  {projects.slice(0, selectedLocality ? visibleCount : projects.length).map((proj) => {
                     const hasGPS = gpsActive && latitude !== null && longitude !== null;
                     let distanceStr = "";
                     if (hasGPS) {
                       const coords = getLocalityCoordinates(proj.locality);
                       const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
-                      distanceStr = `• ~${dist.toFixed(1)} km away`;
+                      distanceStr = `~${dist.toFixed(1)} km away`;
                     }
+                    const showLocation = proj.location && proj.location.toLowerCase() !== proj.locality.toLowerCase();
                     return (
                       <div
                         key={proj._id}
                         onClick={() => setSelectedProject(proj)}
-                        className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center ${
+                        className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center gap-3 ${
                           selectedProject?._id === proj._id
                             ? "bg-indigo-50/50 border-indigo-400 shadow-2xs"
                             : "bg-white border-slate-200 hover:bg-slate-50/50 hover:border-slate-350"
                         }`}
                       >
-                        <div className="space-y-0.5 pr-3 flex-1 min-w-0">
+                        <div className="space-y-0.5 pr-2 flex-1 min-w-0">
                           <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
                           <p className="text-slate-500 text-xs truncate">
-                            {proj.locality} {proj.location && `• ${proj.location}`} {distanceStr}
+                            {proj.locality} {showLocation && `• ${proj.location}`}
                           </p>
                         </div>
-                        <span
-                          className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
-                            proj.isCompleted
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
-                              : "bg-amber-50 text-amber-700 border border-amber-250"
-                          }`}
-                        >
-                          {proj.isCompleted ? "🟢 Completed" : "🟡 Pending"}
-                        </span>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          {distanceStr && (
+                            <span className="text-[10px] text-indigo-600 font-bold font-mono whitespace-nowrap">
+                              {distanceStr}
+                            </span>
+                          )}
+                          <span
+                            className={`text-[9px] px-2 py-0.5 rounded-md font-extrabold tracking-wider uppercase ${
+                              proj.isCompleted
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
+                                : "bg-amber-50 text-amber-700 border border-amber-250"
+                            }`}
+                          >
+                            {proj.isCompleted ? "Completed" : "Pending"}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
 
                   {/* View More Button */}
-                  {projects.length > visibleCount && (
+                  {((selectedLocality && projects.length > visibleCount) || (!selectedLocality && projects.length > 0)) && (
                     <button
                       type="button"
-                      onClick={() => setVisibleCount((prev) => prev + 10)}
-                      className="w-full mt-2.5 bg-slate-100 hover:bg-slate-250 text-indigo-700 font-bold py-3 rounded-xl text-xs border border-slate-200 transition-all duration-150 cursor-pointer text-center"
+                      onClick={() => {
+                        if (selectedLocality) {
+                          setVisibleCount((prev) => prev + 10);
+                        } else {
+                          const nextLimit = currentSectorLimit + 3;
+                          setCurrentSectorLimit(nextLimit);
+                          if (latitude && longitude) {
+                            loadNearbyProjects(latitude, longitude, nextLimit);
+                          }
+                        }
+                      }}
+                      className="w-full mt-2.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 font-bold py-3 rounded-xl text-xs border border-slate-200 transition-all duration-150 cursor-pointer text-center"
                     >
-                      View More Projects (+10)
+                      View More Projects
                     </button>
                   )}
                 </>
@@ -722,12 +788,6 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 ) : (
                   <div className="border border-dashed border-slate-300 rounded-xl py-6 text-center text-slate-400 text-xs md:text-sm bg-white">
                     {isCapturingGps ? "Auto-capturing GPS position..." : "No coordinates locked yet. Use the capture button below."}
-                  </div>
-                )}
-
-                {gpsError && (
-                  <div className="bg-rose-50 border border-rose-250 rounded-xl p-3 text-rose-700 text-xs">
-                    ⚠️ {gpsError}
                   </div>
                 )}
 
@@ -816,7 +876,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
               {/* Error and Success Notifications */}
               {errorMessage && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs font-medium">
+                <div className="bg-rose-50 border border-rose-200 text-rose-750 p-4 rounded-xl text-xs font-medium">
                   Error: {errorMessage}
                 </div>
               )}
