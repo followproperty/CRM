@@ -423,7 +423,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 className="w-full bg-white border border-slate-350 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 placeholder-slate-400 shadow-2xs"
               />
               
-              {isDropdownOpen && filteredLocalities.length > 0 && (
+              {isDropdownOpen && searchLocality.trim().length > 0 && filteredLocalities.length > 0 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
                   {filteredLocalities.map((loc) => {
                     const hasGPS = gpsActive && latitude !== null && longitude !== null;
@@ -455,7 +455,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             </div>
 
             {/* 2. GPS Toggle Switch (ON / OFF) */}
-            <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+            <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 rounded-xl p-3 shadow-2xs mt-4">
               <div className="flex flex-col gap-0.5 pr-2">
                 <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                   📡 GPS Auto-Locator
