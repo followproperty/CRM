@@ -5,6 +5,7 @@ import {
   getLocalityList,
   getProjectsForLocality,
   updateProjectGpsAndPhotos,
+  searchProjectsByName,
 } from "@/app/actions/gps-collector";
 import {
   getLocalityCoordinates,
@@ -40,6 +41,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+
+  // Global projects search state
+  const [searchedProjects, setSearchedProjects] = useState<ProjectItem[]>([]);
 
   // Pagination state (limit to 10 by default)
   const [visibleCount, setVisibleCount] = useState<number>(10);
@@ -96,6 +100,26 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch matching projects globally based on search text (debounced 300ms)
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchLocality.trim().length >= 2) {
+        startTransition(async () => {
+          try {
+            const res = await searchProjectsByName(searchLocality);
+            setSearchedProjects(res);
+          } catch (e) {
+            console.error("Search projects error:", e);
+          }
+        });
+      } else {
+        setSearchedProjects([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchLocality]);
 
   // Fetch projects when locality changes
   useEffect(() => {
@@ -413,7 +437,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             <div ref={searchRef} className="relative mt-3 z-30">
               <input
                 type="text"
-                placeholder={gpsActive ? "Locating nearest sector..." : "Type sector/locality manually..."}
+                placeholder={gpsActive ? "Search sector or project name..." : "Type sector or project name manually..."}
                 value={searchLocality}
                 onChange={(e) => {
                   setSearchLocality(e.target.value);
@@ -423,33 +447,84 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 className="w-full bg-white border border-slate-350 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 placeholder-slate-400 shadow-2xs"
               />
               
-              {isDropdownOpen && searchLocality.trim().length > 0 && filteredLocalities.length > 0 && (
-                <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
-                  {filteredLocalities.map((loc) => {
-                    const hasGPS = gpsActive && latitude !== null && longitude !== null;
-                    let distanceStr = "";
-                    if (hasGPS) {
-                      const coords = getLocalityCoordinates(loc);
-                      const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
-                      distanceStr = ` (${formatDistance(dist)})`;
-                    }
-                    return (
-                      <li
-                        key={loc}
-                        onClick={() => {
-                          setSelectedLocality(loc);
-                          setSearchLocality(loc);
-                          setIsDropdownOpen(false); // Close dropdown recommendations immediately on click
-                        }}
-                        className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center ${
-                          selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
-                        }`}
-                      >
-                        <span>{loc}</span>
-                        {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
+              {isDropdownOpen && searchLocality.trim().length >= 2 && (
+                <ul className="absolute left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
+                  {/* Sectors Section */}
+                  {filteredLocalities.length > 0 && (
+                    <>
+                      <li className="px-4 py-1.5 bg-slate-100 text-[10px] uppercase font-bold text-slate-450 tracking-wider">
+                        Sectors / Localities
                       </li>
-                    );
-                  })}
+                      {filteredLocalities.slice(0, 5).map((loc) => {
+                        const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                        let distanceStr = "";
+                        if (hasGPS) {
+                          const coords = getLocalityCoordinates(loc);
+                          const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                          distanceStr = ` (${formatDistance(dist)})`;
+                        }
+                        return (
+                          <li
+                            key={loc}
+                            onClick={() => {
+                              setSelectedLocality(loc);
+                              setSearchLocality(loc);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center ${
+                              selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
+                            }`}
+                          >
+                            <span>📍 {loc}</span>
+                            {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
+                          </li>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Projects Section */}
+                  {searchedProjects.length > 0 && (
+                    <>
+                      <li className="px-4 py-1.5 bg-slate-100 text-[10px] uppercase font-bold text-slate-450 tracking-wider border-t border-slate-150">
+                        Projects Matching Name
+                      </li>
+                      {searchedProjects.map((proj) => {
+                        const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                        let distanceStr = "";
+                        if (hasGPS && proj.locality) {
+                          const coords = getLocalityCoordinates(proj.locality);
+                          const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                          distanceStr = ` (${formatDistance(dist)})`;
+                        }
+                        return (
+                          <li
+                            key={proj._id}
+                            onClick={() => {
+                              setSelectedLocality(proj.locality);
+                              setSearchLocality(proj.locality);
+                              setProjects([proj]); // Prefill the left-side list with just this searched project
+                              setSelectedProject(proj); // Auto-open this project in the ingestion form
+                              setIsDropdownOpen(false);
+                            }}
+                            className="px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center text-slate-700"
+                          >
+                            <div className="flex flex-col pr-3">
+                              <span className="font-semibold text-slate-800 text-xs sm:text-sm">🏢 {proj.projectName}</span>
+                              <span className="text-[9.5px] text-slate-450 mt-0.5 font-medium">{proj.locality} {proj.location && `• ${proj.location}`}</span>
+                            </div>
+                            {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
+                          </li>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {filteredLocalities.length === 0 && searchedProjects.length === 0 && (
+                    <li className="px-4 py-4 text-xs text-slate-400 text-center">
+                      No matching sectors or projects found.
+                    </li>
+                  )}
                 </ul>
               )}
             </div>
@@ -524,7 +599,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                     <span className="text-3xl">🔍</span>
                     <h4 className="font-bold text-slate-750 text-sm">Search for a Locality</h4>
                     <p className="text-[11px] text-slate-450 max-w-[240px] mx-auto leading-relaxed">
-                      Type the locality name (e.g. Sector 89) in the search box above to load pending projects manually.
+                      Type the locality or project name in the search box above to load pending projects manually.
                     </p>
                   </div>
                 )
