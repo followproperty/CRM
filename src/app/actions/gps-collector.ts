@@ -115,3 +115,20 @@ export async function getFieldCollectorStats() {
     throw new Error(err.message || "Failed to load performance metrics from .com backend.");
   }
 }
+
+/**
+ * Search projects globally by name from the .com site.
+ */
+export async function searchProjectsByName(query: string) {
+  try {
+    const result = await callComApi(
+      `/api/field-collector/search?q=${encodeURIComponent(query.trim())}`,
+      { cache: "no-store" }
+    );
+    return result.projects || [];
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`Error searching projects for query ${query} from .com API:`, err);
+    throw new Error(err.message || "Failed to search projects from .com backend.");
+  }
+}
