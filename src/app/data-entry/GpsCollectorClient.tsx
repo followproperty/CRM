@@ -192,6 +192,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         console.error("Error parsing saved draft", e);
       }
     } else {
+      setLatitude(null);
+      setLongitude(null);
+      setGpsAccuracy(null);
       setNotes("");
       setPhotos([]);
     }
