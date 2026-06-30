@@ -75,6 +75,13 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     });
   }, []);
 
+  // AUTO-GPS TRIGGER: As soon as localities list is loaded, auto-capture location
+  useEffect(() => {
+    if (localities.length > 0) {
+      autoCaptureGps();
+    }
+  }, [localities]);
+
   // Fetch projects when locality changes
   useEffect(() => {
     if (!selectedLocality) return;
@@ -149,7 +156,53 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     localStorage.removeItem(`gps_draft_${projectId}`);
   };
 
-  // Get GPS Coordinates using browser API and auto-find nearest locality
+  // Helper to trigger GPS location capture automatically
+  const autoCaptureGps = () => {
+    if (!navigator.geolocation) return;
+    
+    setIsCapturingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+        setGpsAccuracy(position.coords.accuracy);
+        setIsCapturingGps(false);
+
+        // Find and select closest locality automatically
+        if (localities.length > 0) {
+          let closestLoc = localities[0];
+          let minDistance = Infinity;
+
+          localities.forEach((loc) => {
+            const locCoords = getLocalityCoordinates(loc);
+            const dist = calculateDistance(lat, lng, locCoords.lat, locCoords.lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestLoc = loc;
+            }
+          });
+
+          if (closestLoc) {
+            setSelectedLocality(closestLoc);
+            setSearchLocality(closestLoc);
+          }
+        }
+      },
+      (error) => {
+        console.warn("Auto GPS capture warning:", error.message);
+        setIsCapturingGps(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  // Manual GPS capture / refresh coordinates
   const captureGps = () => {
     setIsCapturingGps(true);
     setGpsError(null);
@@ -513,7 +566,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   </div>
                 ) : (
                   <div className="border border-dashed border-slate-300 rounded-xl py-6 text-center text-slate-400 text-xs md:text-sm bg-white">
-                    No coordinates locked yet. Use the capture button below.
+                    {isCapturingGps ? "Auto-capturing GPS position..." : "No coordinates locked yet. Use the capture button below."}
                   </div>
                 )}
 
