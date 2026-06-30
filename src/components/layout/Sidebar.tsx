@@ -114,6 +114,7 @@ export function Sidebar({ role, userName, userEmail, onCloseMobile }: SidebarPro
     ],
     [UserRole.DATA_ENTRY]: [
       { title: "GPS Collector", href: "/data-entry", icon: <Icons.Form /> },
+      { title: "My Performance", href: "/data-entry/performance", icon: <Icons.Analytics /> },
     ],
   };
 
