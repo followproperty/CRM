@@ -64,11 +64,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       try {
         const list = await getLocalityList();
         setLocalities(list);
-        if (list.length > 0) {
-          const defaultLoc = list.includes("Sector 89") ? "Sector 89" : list[0];
-          setSelectedLocality(defaultLoc);
-          setSearchLocality(defaultLoc);
-        }
+        // Note: Do NOT set default selectedLocality or searchLocality here.
+        // It stays empty until GPS resolves or the user searches manually.
       } catch {
         setErrorMessage("Failed to load localities from database.");
       }
@@ -109,6 +106,8 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
+        // If GPS coordinate inputs were manually saved, restore them.
+        // But do not override active state if they differ.
         setLatitude(draft.latitude || null);
         setLongitude(draft.longitude || null);
         setGpsAccuracy(draft.gpsAccuracy || null);
@@ -406,11 +405,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               {isDropdownOpen && filteredLocalities.length > 0 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
                   {filteredLocalities.map((loc) => {
-                    const hasGPS = latitude && longitude;
+                    const hasGPS = latitude !== null && longitude !== null;
                     let distanceStr = "";
                     if (hasGPS) {
                       const coords = getLocalityCoordinates(loc);
-                      const dist = calculateDistance(latitude, longitude, coords.lat, coords.lng);
+                      const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
                       distanceStr = ` (${formatDistance(dist)})`;
                     }
                     return (
@@ -441,7 +440,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
                     Projects in {selectedLocality}
                   </span>
-                  {getSelectedLocalityDistanceStr() && (
+                  {latitude && longitude && getSelectedLocalityDistanceStr() && (
                     <span className="text-[10px] text-indigo-650 font-bold font-mono">
                       📍 {getSelectedLocalityDistanceStr()}
                     </span>
@@ -455,48 +454,61 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
             {/* Projects List (paginated to show 10 at a time) */}
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-              {projects.length === 0 && selectedLocality && (
-                <div className="text-center py-10 text-slate-400 text-sm">
-                  No projects found in this locality.
+              {!selectedLocality ? (
+                // Display when GPS is off/loading and no locality is manually selected yet
+                <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-white space-y-3 mt-4">
+                  <span className="text-3xl animate-pulse">📡</span>
+                  <h4 className="font-bold text-slate-750 text-sm">Location Not Active</h4>
+                  <p className="text-[11px] text-slate-450 max-w-[240px] mx-auto leading-relaxed">
+                    Please enable GPS/location services on your device to automatically load nearby projects, or search for a locality manually above.
+                  </p>
                 </div>
-              )}
-              {projects.slice(0, visibleCount).map((proj) => (
-                <div
-                  key={proj._id}
-                  onClick={() => setSelectedProject(proj)}
-                  className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center ${
-                    selectedProject?._id === proj._id
-                      ? "bg-indigo-50/50 border-indigo-400 shadow-2xs"
-                      : "bg-white border-slate-200 hover:bg-slate-50/50 hover:border-slate-350"
-                  }`}
-                >
-                  <div className="space-y-0.5 pr-3 flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
-                    <p className="text-slate-500 text-xs truncate">
-                      {proj.location} {getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
-                      proj.isCompleted
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
-                        : "bg-amber-50 text-amber-700 border border-amber-250"
-                    }`}
-                  >
-                    {proj.isCompleted ? "🟢 Completed" : "🟡 Pending"}
-                  </span>
-                </div>
-              ))}
+              ) : (
+                <>
+                  {projects.length === 0 && (
+                    <div className="text-center py-10 text-slate-400 text-sm">
+                      No projects found in this locality.
+                    </div>
+                  )}
+                  {projects.slice(0, visibleCount).map((proj) => (
+                    <div
+                      key={proj._id}
+                      onClick={() => setSelectedProject(proj)}
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex justify-between items-center ${
+                        selectedProject?._id === proj._id
+                          ? "bg-indigo-50/50 border-indigo-400 shadow-2xs"
+                          : "bg-white border-slate-200 hover:bg-slate-50/50 hover:border-slate-350"
+                      }`}
+                    >
+                      <div className="space-y-0.5 pr-3 flex-1 min-w-0">
+                        <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
+                        <p className="text-slate-500 text-xs truncate">
+                          {proj.location} {latitude && longitude && getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
+                          proj.isCompleted
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-250"
+                            : "bg-amber-50 text-amber-700 border border-amber-250"
+                        }`}
+                      >
+                        {proj.isCompleted ? "🟢 Completed" : "🟡 Pending"}
+                      </span>
+                    </div>
+                  ))}
 
-              {/* View More Button */}
-              {projects.length > visibleCount && (
-                <button
-                  type="button"
-                  onClick={() => setVisibleCount((prev) => prev + 10)}
-                  className="w-full mt-2.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 font-bold py-3 rounded-xl text-xs border border-slate-200 transition-all duration-150 cursor-pointer text-center"
-                >
-                  View More Projects (+10)
-                </button>
+                  {/* View More Button */}
+                  {projects.length > visibleCount && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + 10)}
+                      className="w-full mt-2.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 font-bold py-3 rounded-xl text-xs border border-slate-200 transition-all duration-150 cursor-pointer text-center"
+                    >
+                      View More Projects (+10)
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
