@@ -44,6 +44,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
   // Global projects search state
   const [searchedProjects, setSearchedProjects] = useState<ProjectItem[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   // Pagination state (limit to 10 by default)
   const [visibleCount, setVisibleCount] = useState<number>(10);
@@ -105,16 +106,20 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchLocality.trim().length >= 2) {
+        setIsSearching(true);
         startTransition(async () => {
           try {
             const res = await searchProjectsByName(searchLocality);
             setSearchedProjects(res);
           } catch (e) {
             console.error("Search projects error:", e);
+          } finally {
+            setIsSearching(false);
           }
         });
       } else {
         setSearchedProjects([]);
+        setIsSearching(false);
       }
     }, 300);
 
@@ -449,7 +454,12 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               
               {isDropdownOpen && searchLocality.trim().length >= 2 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
-                  {searchedProjects.length > 0 ? (
+                  {isSearching ? (
+                    <li className="px-4 py-4 text-xs text-slate-500 text-center flex items-center justify-center gap-2">
+                      <div className="w-3.5 h-3.5 border-2 border-indigo-650/30 border-t-indigo-650 rounded-full animate-spin" />
+                      Searching database...
+                    </li>
+                  ) : searchedProjects.length > 0 ? (
                     searchedProjects.map((proj) => {
                       const hasGPS = gpsActive && latitude !== null && longitude !== null;
                       let distanceStr = "";
