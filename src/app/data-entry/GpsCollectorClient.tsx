@@ -449,80 +449,44 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               
               {isDropdownOpen && searchLocality.trim().length >= 2 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
-                  {/* Sectors Section */}
-                  {filteredLocalities.length > 0 && (
-                    <>
-                      <li className="px-4 py-1.5 bg-slate-100 text-[10px] uppercase font-bold text-slate-450 tracking-wider">
-                        Sectors / Localities
-                      </li>
-                      {filteredLocalities.slice(0, 5).map((loc) => {
-                        const hasGPS = gpsActive && latitude !== null && longitude !== null;
-                        let distanceStr = "";
-                        if (hasGPS) {
-                          const coords = getLocalityCoordinates(loc);
-                          const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
-                          distanceStr = ` (${formatDistance(dist)})`;
-                        }
-                        return (
-                          <li
-                            key={loc}
-                            onClick={() => {
-                              setSelectedLocality(loc);
-                              setSearchLocality(loc);
-                              setIsDropdownOpen(false);
-                            }}
-                            className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center ${
-                              selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
-                            }`}
-                          >
-                            <span>📍 {loc}</span>
-                            {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
-                          </li>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  {/* Projects Section */}
-                  {searchedProjects.length > 0 && (
-                    <>
-                      <li className="px-4 py-1.5 bg-slate-100 text-[10px] uppercase font-bold text-slate-450 tracking-wider border-t border-slate-150">
-                        Projects Matching Name
-                      </li>
-                      {searchedProjects.map((proj) => {
-                        const hasGPS = gpsActive && latitude !== null && longitude !== null;
-                        let distanceStr = "";
-                        if (hasGPS && proj.locality) {
-                          const coords = getLocalityCoordinates(proj.locality);
-                          const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
-                          distanceStr = ` (${formatDistance(dist)})`;
-                        }
-                        return (
-                          <li
-                            key={proj._id}
-                            onClick={() => {
-                              setSelectedLocality(proj.locality);
-                              setSearchLocality(proj.locality);
-                              setProjects([proj]); // Prefill the left-side list with just this searched project
-                              setSelectedProject(proj); // Auto-open this project in the ingestion form
-                              setIsDropdownOpen(false);
-                            }}
-                            className="px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center text-slate-700"
-                          >
-                            <div className="flex flex-col pr-3">
-                              <span className="font-semibold text-slate-800 text-xs sm:text-sm">🏢 {proj.projectName}</span>
-                              <span className="text-[9.5px] text-slate-450 mt-0.5 font-medium">{proj.locality} {proj.location && `• ${proj.location}`}</span>
-                            </div>
-                            {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
-                          </li>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  {filteredLocalities.length === 0 && searchedProjects.length === 0 && (
+                  {searchedProjects.length > 0 ? (
+                    searchedProjects.map((proj) => {
+                      const hasGPS = gpsActive && latitude !== null && longitude !== null;
+                      let distanceStr = "";
+                      if (hasGPS && proj.locality) {
+                        const coords = getLocalityCoordinates(proj.locality);
+                        const dist = calculateDistance(latitude!, longitude!, coords.lat, coords.lng);
+                        distanceStr = `(~${dist.toFixed(1)} km away)`;
+                      }
+                      return (
+                        <li
+                          key={proj._id}
+                          onClick={() => {
+                            setSelectedLocality(proj.locality);
+                            setSearchLocality(proj.projectName); // Fill search box with selected project name
+                            setProjects([proj]); // Prefill the left-side list with just this searched project
+                            setSelectedProject(proj); // Auto-open this project in the ingestion form
+                            setIsDropdownOpen(false);
+                          }}
+                          className="px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center text-slate-700"
+                        >
+                          <div className="flex flex-col pr-3">
+                            <span className="font-semibold text-slate-800 text-xs sm:text-sm">🏢 {proj.projectName}</span>
+                            <span className="text-[10px] text-slate-450 mt-1 font-medium">
+                              {proj.locality} {proj.location && `• ${proj.location}`}
+                            </span>
+                          </div>
+                          {distanceStr && (
+                            <span className="text-[10px] text-slate-400 font-mono font-medium whitespace-nowrap">
+                              {distanceStr}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })
+                  ) : (
                     <li className="px-4 py-4 text-xs text-slate-400 text-center">
-                      No matching sectors or projects found.
+                      No matching projects found.
                     </li>
                   )}
                 </ul>
