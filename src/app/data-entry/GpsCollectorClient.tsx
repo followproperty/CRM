@@ -130,7 +130,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   useEffect(() => {
     if (!selectedLocality) return;
     
-    setSelectedProject(null);
+    // Only reset project selection if the currently selected project doesn't belong to the new sector
+    if (!selectedProject || selectedProject.locality !== selectedLocality) {
+      setSelectedProject(null);
+    }
+    
     clearPhotosAndNotes(); // Clear photos/notes, but preserve coordinates if we have locked them
     setVisibleCount(10); // Reset pagination limit to 10
 
