@@ -6,6 +6,11 @@ import {
   getProjectsForLocality,
   updateProjectGpsAndPhotos,
 } from "@/app/actions/gps-collector";
+import {
+  getLocalityCoordinates,
+  calculateDistance,
+  formatDistance,
+} from "@/lib/gurgaonSectors";
 
 interface ProjectItem {
   _id: string;
@@ -32,6 +37,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+
+  // Pagination state (limit to 10 by default)
+  const [visibleCount, setVisibleCount] = useState<number>(10);
 
   // GPS state
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -73,6 +81,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     
     setSelectedProject(null);
     clearEntryForm();
+    setVisibleCount(10); // Reset pagination limit to 10
 
     startTransition(async () => {
       try {
@@ -140,7 +149,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     localStorage.removeItem(`gps_draft_${projectId}`);
   };
 
-  // Get GPS Coordinates using browser API
+  // Get GPS Coordinates using browser API and auto-find nearest locality
   const captureGps = () => {
     setIsCapturingGps(true);
     setGpsError(null);
@@ -153,10 +162,32 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
         setGpsAccuracy(position.coords.accuracy);
         setIsCapturingGps(false);
+
+        // Auto-select nearest sector based on distance
+        if (localities.length > 0) {
+          let closestLoc = localities[0];
+          let minDistance = Infinity;
+
+          localities.forEach((loc) => {
+            const locCoords = getLocalityCoordinates(loc);
+            const dist = calculateDistance(lat, lng, locCoords.lat, locCoords.lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestLoc = loc;
+            }
+          });
+
+          if (closestLoc && closestLoc !== selectedLocality) {
+            setSelectedLocality(closestLoc);
+            setSearchLocality(closestLoc);
+          }
+        }
       },
       (error) => {
         console.error("GPS error:", error);
@@ -271,6 +302,14 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     });
   };
 
+  // Calculate distance from current position to selected locality
+  const getSelectedLocalityDistanceStr = () => {
+    if (!latitude || !longitude || !selectedLocality) return "";
+    const coords = getLocalityCoordinates(selectedLocality);
+    const dist = calculateDistance(latitude, longitude, coords.lat, coords.lng);
+    return formatDistance(dist);
+  };
+
   const filteredLocalities = localities.filter((loc) =>
     loc.toLowerCase().includes(searchLocality.toLowerCase())
   );
@@ -281,6 +320,13 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
       <div className="bg-slate-100 border border-slate-200 rounded-xl p-3.5 mb-6 text-slate-700 text-xs shadow-2xs">
         💡 Hi <strong>{userName}</strong>, please make sure <strong>Camera Location (Geotagging)</strong> is turned ON in your phone settings so photos save GPS coordinates.
       </div>
+
+      {/* General Error Banner */}
+      {errorMessage && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-750 p-3.5 rounded-xl text-xs font-semibold mb-6">
+          ⚠️ Error: {errorMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Side: Locality Finder */}
@@ -306,21 +352,31 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
               
               {isDropdownOpen && filteredLocalities.length > 0 && (
                 <ul className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-40">
-                  {filteredLocalities.map((loc) => (
-                    <li
-                      key={loc}
-                      onClick={() => {
-                        setSelectedLocality(loc);
-                        setSearchLocality(loc);
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 ${
-                        selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
-                      }`}
-                    >
-                      {loc}
-                    </li>
-                  ))}
+                  {filteredLocalities.map((loc) => {
+                    const hasGPS = latitude && longitude;
+                    let distanceStr = "";
+                    if (hasGPS) {
+                      const coords = getLocalityCoordinates(loc);
+                      const dist = calculateDistance(latitude, longitude, coords.lat, coords.lng);
+                      distanceStr = ` (${formatDistance(dist)})`;
+                    }
+                    return (
+                      <li
+                        key={loc}
+                        onClick={() => {
+                          setSelectedLocality(loc);
+                          setSearchLocality(loc);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`px-4 py-3.5 text-sm cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center ${
+                          selectedLocality === loc ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-700"
+                        }`}
+                      >
+                        <span>{loc}</span>
+                        {distanceStr && <span className="text-[10px] text-slate-400 font-mono font-medium">{distanceStr}</span>}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -328,23 +384,30 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
             {/* Total count details */}
             {selectedLocality && (
               <div className="flex justify-between items-center mt-6 mb-3">
-                <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
-                  Projects in {selectedLocality}
-                </span>
-                <span className="text-[11px] bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 font-medium">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                    Projects in {selectedLocality}
+                  </span>
+                  {getSelectedLocalityDistanceStr() && (
+                    <span className="text-[10px] text-indigo-650 font-bold font-mono">
+                      📍 {getSelectedLocalityDistanceStr()}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 font-medium self-start">
                   {projects.filter((p) => p.isCompleted).length} / {projects.length} Done
                 </span>
               </div>
             )}
 
-            {/* Projects List */}
+            {/* Projects List (paginated to show 10 at a time) */}
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
               {projects.length === 0 && selectedLocality && (
                 <div className="text-center py-10 text-slate-400 text-sm">
                   No projects found in this locality.
                 </div>
               )}
-              {projects.map((proj) => (
+              {projects.slice(0, visibleCount).map((proj) => (
                 <div
                   key={proj._id}
                   onClick={() => setSelectedProject(proj)}
@@ -356,7 +419,9 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                 >
                   <div className="space-y-0.5 pr-3 flex-1 min-w-0">
                     <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{proj.projectName}</h4>
-                    <p className="text-slate-500 text-xs truncate">{proj.location}</p>
+                    <p className="text-slate-500 text-xs truncate">
+                      {proj.location} {getSelectedLocalityDistanceStr() && `• ${getSelectedLocalityDistanceStr()}`}
+                    </p>
                   </div>
                   <span
                     className={`text-[10px] px-2.5 py-1 rounded-md font-bold flex-shrink-0 ${
@@ -369,6 +434,17 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
                   </span>
                 </div>
               ))}
+
+              {/* View More Button */}
+              {projects.length > visibleCount && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 10)}
+                  className="w-full mt-2.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 font-bold py-3 rounded-xl text-xs border border-slate-200 transition-all duration-150 cursor-pointer text-center"
+                >
+                  View More Projects (+10)
+                </button>
+              )}
             </div>
           </div>
         </div>
