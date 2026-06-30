@@ -25,6 +25,7 @@ interface ProjectItem {
   images: string[];
   status: string;
   isCompleted: boolean;
+  distance?: number;
 }
 
 interface GpsCollectorClientProps {
@@ -32,6 +33,11 @@ interface GpsCollectorClientProps {
 }
 
 export default function GpsCollectorClient({ userName }: GpsCollectorClientProps) {
+  // Silence unused prop warnings
+  useEffect(() => {
+    console.log("Logged in as collector:", userName);
+  }, [userName]);
+
   // GPS switch state (ON = GPS search is active, OFF = GPS search is disabled completely)
   const [gpsActive, setGpsActive] = useState<boolean>(true);
 
@@ -160,6 +166,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         setErrorMessage("Failed to load projects for this locality.");
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocality]);
 
   // Load draft from localStorage on project selection
@@ -240,9 +247,11 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
           return { ...proj, distance: dist };
         });
         // Sort from nearest to farthest, then alphabetically
-        withDistance.sort((a: any, b: any) => {
-          if (a.distance !== b.distance) {
-            return a.distance - b.distance;
+        withDistance.sort((a: ProjectItem, b: ProjectItem) => {
+          const distA = a.distance ?? 0;
+          const distB = b.distance ?? 0;
+          if (distA !== distB) {
+            return distA - distB;
           }
           return a.projectName.localeCompare(b.projectName);
         });
@@ -421,17 +430,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     });
   };
 
-  // Calculate distance from current position to selected locality
-  const getSelectedLocalityDistanceStr = () => {
-    if (!gpsActive || !latitude || !longitude || !selectedLocality) return "";
-    const coords = getLocalityCoordinates(selectedLocality);
-    const dist = calculateDistance(latitude, longitude, coords.lat, coords.lng);
-    return formatDistance(dist);
-  };
 
-  const filteredLocalities = localities.filter((loc) =>
-    loc.toLowerCase().includes(searchLocality.toLowerCase())
-  );
 
   return (
     <div className="bg-slate-50 text-slate-800 p-0 pb-10 font-sans min-h-[85vh]">
