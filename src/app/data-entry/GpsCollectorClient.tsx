@@ -218,9 +218,14 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
         longitude: formLng,
         gpsAccuracy: formAccuracy,
         notes,
-        photos,
+        // Map photos array to only save preview/base64 strings, excluding non-serializable File objects
+        photos: photos.map(p => ({ id: p.id, preview: p.preview, base64: p.base64 })),
       };
-      localStorage.setItem(draftKey, JSON.stringify(draft));
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+      } catch (err) {
+        console.warn("Could not save draft to local storage:", err);
+      }
     } else {
       localStorage.removeItem(draftKey);
     }
@@ -385,30 +390,82 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     );
   };
 
-  // Handle Photo Selection
+  // Compress image helper using HTML5 Canvas
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimension 1200px to avoid large memory footprint
+          const MAX_FROM_DIM = 1200;
+          if (width > height) {
+            if (width > MAX_FROM_DIM) {
+              height = Math.round((height * MAX_FROM_DIM) / width);
+              width = MAX_FROM_DIM;
+            }
+          } else {
+            if (height > MAX_FROM_DIM) {
+              width = Math.round((width * MAX_FROM_DIM) / height);
+              height = MAX_FROM_DIM;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress as JPEG with 0.7 quality to reduce file sizes to ~150KB
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(dataUrl);
+        };
+        img.onerror = () => {
+          resolve(event.target?.result as string);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => {
+        resolve("");
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle Photo Selection with automatic Canvas Compression
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      if (photos.some((p) => p.file.name === file.name && p.file.size === file.size)) {
+    Array.from(files).forEach(async (file) => {
+      // Check if file is already added safely (p.file might be undefined if loaded from draft cache)
+      if (photos.some((p) => p.file && p.file.name === file.name && p.file.size === file.size)) {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
+      try {
+        const compressedBase64 = await compressImage(file);
+        if (!compressedBase64) return;
         setPhotos((prev) => [
           ...prev,
           {
             id: Math.random().toString(36).substring(2, 9),
             file,
             preview: URL.createObjectURL(file),
-            base64,
+            base64: compressedBase64,
           },
         ]);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Compression error:", err);
+      }
     });
   };
 
