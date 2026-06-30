@@ -69,6 +69,19 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Load persistent GPS switch state on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("gps_active_state");
+    if (saved !== null) {
+      setGpsActive(saved === "true");
+    }
+  }, []);
+
+  // Save GPS switch state when it changes
+  useEffect(() => {
+    localStorage.setItem("gps_active_state", String(gpsActive));
+  }, [gpsActive]);
+
   // Load distinct localities on mount
   useEffect(() => {
     startTransition(async () => {
