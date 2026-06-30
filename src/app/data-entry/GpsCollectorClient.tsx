@@ -77,6 +77,7 @@ export default function GpsCollectorClient({ userName }: GpsCollectorClientProps
     if (localities.length > 0) {
       autoCaptureGps();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localities]);
 
   // Fetch projects when locality changes
