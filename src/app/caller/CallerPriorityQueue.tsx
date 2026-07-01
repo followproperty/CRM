@@ -10,8 +10,42 @@ interface CallerPriorityQueueProps {
   leads: ILead[];
 }
 
+const sortLeadsClientSide = (leads: ILead[]): ILead[] => {
+  const now = new Date();
+  const offset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+  const todayIST = new Date(now.getTime() + offset);
+  todayIST.setUTCHours(0, 0, 0, 0);
+
+  return [...leads].sort((a, b) => {
+    const isNewOrCalledA = a.status === LeadStatus.NEW || a.status === LeadStatus.CALLED;
+    const isNewOrCalledB = b.status === LeadStatus.NEW || b.status === LeadStatus.CALLED;
+
+    const updatedAtA = a.updatedAt ? new Date(a.updatedAt) : null;
+    const updatedAtB = b.updatedAt ? new Date(b.updatedAt) : null;
+
+    const wasCalledTodayA = !isNewOrCalledA && updatedAtA && (updatedAtA.getTime() + offset) >= todayIST.getTime();
+    const wasCalledTodayB = !isNewOrCalledB && updatedAtB && (updatedAtB.getTime() + offset) >= todayIST.getTime();
+
+    if (wasCalledTodayA && !wasCalledTodayB) return 1;
+    if (!wasCalledTodayA && wasCalledTodayB) return -1;
+
+    if (!wasCalledTodayA) {
+      if (isNewOrCalledA && !isNewOrCalledB) return -1;
+      if (!isNewOrCalledA && isNewOrCalledB) return 1;
+
+      const dateA = updatedAtA ? updatedAtA.getTime() : 0;
+      const dateB = updatedAtB ? updatedAtB.getTime() : 0;
+      return dateB - dateA;
+    } else {
+      const dateA = updatedAtA ? updatedAtA.getTime() : 0;
+      const dateB = updatedAtB ? updatedAtB.getTime() : 0;
+      return dateA - dateB;
+    }
+  });
+};
+
 export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps) {
-  const [leadsList, setLeadsList] = useState<ILead[]>(leads);
+  const [leadsList, setLeadsList] = useState<ILead[]>(() => sortLeadsClientSide(leads));
   const [activeCallLeadId, setActiveCallLeadId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
 
@@ -51,7 +85,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const [maybeLaterNote, setMaybeLaterNote] = useState("");
 
   useEffect(() => {
-    setLeadsList(leads);
+    setLeadsList(sortLeadsClientSide(leads));
   }, [leads]);
 
   const getStartOfTodayIST = () => {
@@ -79,9 +113,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
         const leadId = parsed.leadId;
         const collectionType = parsed.collectionType;
 
-        if (elapsed < 10000) {
+        if (elapsed < 9000) {
           setActiveCallLeadId(leadId);
-          setSecondsLeft(Math.max(0, Math.ceil((10000 - elapsed) / 1000)));
+          setSecondsLeft(Math.max(0, Math.ceil((9000 - elapsed) / 1000)));
         } else {
           sessionStorage.removeItem("active_call");
           // If the lead status was NEW, update it to CALLED since the call is finished
@@ -91,7 +125,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
               (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
             ));
             startTransition(async () => {
-              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (10s)", collectionType);
+              await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (9s)", collectionType);
             });
           }
         }
@@ -121,7 +155,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
         // 3. Update database in background
         startTransition(async () => {
-          await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (10s)", collectionType);
+          await updateLeadStatusAction(leadId, LeadStatus.CALLED, null, "Call duration completed (9s)", collectionType);
         });
       }
 
@@ -273,7 +307,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     const startTime = Date.now();
     setActiveCallLeadId(leadId);
-    setSecondsLeft(10);
+    setSecondsLeft(9);
 
     if (typeof window !== "undefined") {
       const sessionState = { leadId, startTime, collectionType: lead.collectionType };
@@ -295,25 +329,29 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       return;
     }
 
-    // Close modal immediately for instant UI response
-    setActiveOutcomeLead(null);
-    setOutcomeNote("");
-
     // Update locally first for instant UI response!
-    setLeadsList(prev => prev.map(l =>
-      (l._id ? l._id.toString() : "") === leadId ? { ...l, status, updatedAt: new Date() } : l
-    ));
+    setLeadsList(prev => {
+      const updated = prev.map(l =>
+        (l._id ? l._id.toString() : "") === leadId ? { ...l, status, updatedAt: new Date() } : l
+      );
+      return sortLeadsClientSide(updated);
+    });
 
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
+        setActiveOutcomeLead(null);
+        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
         // Rollback
-        setLeadsList(prev => prev.map(l =>
-          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
-        ));
+        setLeadsList(prev => {
+          const rolledBack = prev.map(l =>
+            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+          );
+          return sortLeadsClientSide(rolledBack);
+        });
       }
     });
   };
@@ -321,25 +359,29 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const handleRequestWhatsApp = (lead: ILead) => {
     const leadId = lead._id ? lead._id.toString() : "";
 
-    // Close modal immediately for instant UI response
-    setActiveOutcomeLead(null);
-    setOutcomeNote("");
-
     // Update locally first for instant UI response!
-    setLeadsList(prev => prev.map(l =>
-      (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.ADMIN_FOLLOWUP, handedOffToAdmin: true, updatedAt: new Date() } : l
-    ));
+    setLeadsList(prev => {
+      const updated = prev.map(l =>
+        (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.ADMIN_FOLLOWUP, handedOffToAdmin: true, updatedAt: new Date() } : l
+      );
+      return sortLeadsClientSide(updated);
+    });
 
     startTransition(async () => {
       const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
       if (result.success) {
         showMessage("WhatsApp follow-up requested with Admin.");
+        setActiveOutcomeLead(null);
+        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
         // Rollback
-        setLeadsList(prev => prev.map(l =>
-          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, handedOffToAdmin: false } : l
-        ));
+        setLeadsList(prev => {
+          const rolledBack = prev.map(l =>
+            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, handedOffToAdmin: false } : l
+          );
+          return sortLeadsClientSide(rolledBack);
+        });
       }
     });
   };
@@ -454,35 +496,40 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     const noteText = status === LeadStatus.INTERESTED ? interestedNote : status === LeadStatus.MAYBE_LATER ? maybeLaterNote : outcomeNote;
 
-    closeOutcomeModal();
-
     // Update locally first for instant UI response!
-    setLeadsList(prev => prev.map(l =>
-      (l._id ? l._id.toString() : "") === leadId ? {
-        ...l,
-        status,
-        updatedAt: new Date(),
-        projectName: extraDetails?.projectName || l.projectName,
-        city: extraDetails?.city || l.city,
-        budgetValue: extraDetails?.budgetValue || l.budgetValue,
-        budgetUnit: extraDetails?.budgetUnit || l.budgetUnit,
-        configuration: extraDetails?.configuration || l.configuration,
-        possessionTimeline: extraDetails?.possessionTimeline || l.possessionTimeline,
-        maybeLaterTimeframe: extraDetails?.maybeLaterTimeframe || l.maybeLaterTimeframe,
-        maybeLaterDate: extraDetails?.maybeLaterDate || l.maybeLaterDate
-      } : l
-    ));
+    setLeadsList(prev => {
+      const updated = prev.map(l =>
+        (l._id ? l._id.toString() : "") === leadId ? {
+          ...l,
+          status,
+          updatedAt: new Date(),
+          projectName: extraDetails?.projectName || l.projectName,
+          city: extraDetails?.city || l.city,
+          budgetValue: extraDetails?.budgetValue || l.budgetValue,
+          budgetUnit: extraDetails?.budgetUnit || l.budgetUnit,
+          configuration: extraDetails?.configuration || l.configuration,
+          possessionTimeline: extraDetails?.possessionTimeline || l.possessionTimeline,
+          maybeLaterTimeframe: extraDetails?.maybeLaterTimeframe || l.maybeLaterTimeframe,
+          maybeLaterDate: extraDetails?.maybeLaterDate || l.maybeLaterDate
+        } : l
+      );
+      return sortLeadsClientSide(updated);
+    });
 
     startTransition(async () => {
       const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
+        closeOutcomeModal();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
         // Rollback
-        setLeadsList(prev => prev.map(l =>
-          (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
-        ));
+        setLeadsList(prev => {
+          const rolledBack = prev.map(l =>
+            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+          );
+          return sortLeadsClientSide(rolledBack);
+        });
       }
     });
   };
