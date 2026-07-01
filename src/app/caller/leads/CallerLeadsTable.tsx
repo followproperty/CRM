@@ -819,7 +819,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedSubStatus(LeadStatus.INTERESTED)}
-                  onTouchStart={() => setSelectedSubStatus(LeadStatus.INTERESTED)}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    setSelectedSubStatus(LeadStatus.INTERESTED);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold text-sm border border-emerald-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -888,7 +891,10 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedSubStatus(LeadStatus.MAYBE_LATER)}
-                  onTouchStart={() => setSelectedSubStatus(LeadStatus.MAYBE_LATER)}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    setSelectedSubStatus(LeadStatus.MAYBE_LATER);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 rounded-xl font-bold text-sm border border-fuchsia-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
