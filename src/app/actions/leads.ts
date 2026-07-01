@@ -44,6 +44,18 @@ async function syncLeadToContainer(lead: ILeadDocument, collectionType?: string)
   }
 }
 
+async function resolveLeadAndModel(leadId: string, collectionType?: string) {
+  const containerLead = await LeadContainer.findById(leadId).lean();
+  const sourceCol = containerLead 
+    ? ((containerLead as { sourceCollection?: string }).sourceCollection || "leads") 
+    : (collectionType || "leads");
+  
+  const Model = getLeadModel(sourceCol);
+  const lead = await Model.findById(leadId);
+  
+  return { lead, Model, sourceCol };
+}
+
 export async function assignLeadAction(leadId: string, assigneeId: string | null, collectionType?: string): Promise<AssignLeadResult> {
   const session = await getSession();
   if (!session || (session.role !== UserRole.SUPER_ADMIN && session.role !== UserRole.ADMIN)) {
@@ -151,9 +163,7 @@ export async function updateLeadStatusAction(
   try {
     await dbConnect();
 
-    const Model = getLeadModel(collectionType);
-    // Verify lead exists
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -234,7 +244,7 @@ export async function updateLeadStatusAction(
     }
 
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Trigger notification if status is INTERESTED
     if (status === LeadStatus.INTERESTED) {
@@ -289,9 +299,7 @@ export async function scheduleSiteVisitAction(
   try {
     await dbConnect();
 
-    const Model = getLeadModel(collectionType);
-    // Verify lead exists
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -323,7 +331,7 @@ export async function scheduleSiteVisitAction(
     lead.updatedBy = session.userId;
 
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Trigger notification
     await triggerSiteVisitScheduledNotification(lead);
@@ -364,8 +372,7 @@ export async function startNegotiationAction(leadId: string, collectionType?: st
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -374,7 +381,7 @@ export async function startNegotiationAction(leadId: string, collectionType?: st
     lead.status = LeadStatus.NEGOTIATION;
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Log activity
     await createAuditedActivity({
@@ -405,8 +412,7 @@ export async function markCustomerWonAction(leadId: string, collectionType?: str
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -416,7 +422,7 @@ export async function markCustomerWonAction(leadId: string, collectionType?: str
     lead.wonAt = new Date();
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Trigger notification
     await triggerCustomerWonNotification(lead);
@@ -458,8 +464,7 @@ export async function markCustomerLostAction(
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -470,7 +475,7 @@ export async function markCustomerLostAction(
     lead.lostReason = reason.trim();
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Log activity
     await createAuditedActivity({
@@ -504,8 +509,7 @@ export async function requestWhatsAppFollowupAction(leadId: string, collectionTy
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -517,7 +521,7 @@ export async function requestWhatsAppFollowupAction(leadId: string, collectionTy
     lead.handedOffBy = session.userId;
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Trigger notification
     await triggerAdminHandoffNotification(lead);
@@ -553,8 +557,7 @@ export async function markWhatsAppDetailsSentAction(leadId: string, collectionTy
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -562,7 +565,7 @@ export async function markWhatsAppDetailsSentAction(leadId: string, collectionTy
     lead.status = LeadStatus.WHATSAPP_SHARED;
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Trigger notification
     await triggerWhatsAppDetailsSentNotification(lead);
@@ -598,8 +601,7 @@ export async function startAdminFollowupAction(leadId: string, collectionType?: 
 
   try {
     await dbConnect();
-    const Model = getLeadModel(collectionType);
-    const lead = await Model.findById(leadId);
+    const { lead, sourceCol } = await resolveLeadAndModel(leadId, collectionType);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -607,7 +609,7 @@ export async function startAdminFollowupAction(leadId: string, collectionType?: 
     lead.status = LeadStatus.ADMIN_FOLLOWUP;
     lead.updatedBy = session.userId;
     await lead.save();
-    await syncLeadToContainer(lead, collectionType);
+    await syncLeadToContainer(lead, sourceCol);
 
     // Log Activity
     await createAuditedActivity({
