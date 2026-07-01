@@ -329,6 +329,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       return;
     }
 
+    // Close modal immediately for instant UX!
+    setActiveOutcomeLead(null);
+    setOutcomeNote("");
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -341,8 +345,6 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
-        setActiveOutcomeLead(null);
-        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
         // Rollback
@@ -359,6 +361,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const handleRequestWhatsApp = (lead: ILead) => {
     const leadId = lead._id ? lead._id.toString() : "";
 
+    // Close modal immediately for instant UX!
+    setActiveOutcomeLead(null);
+    setOutcomeNote("");
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -371,8 +377,6 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
       if (result.success) {
         showMessage("WhatsApp follow-up requested with Admin.");
-        setActiveOutcomeLead(null);
-        setOutcomeNote("");
       } else {
         showMessage(result.error || "Failed to request WhatsApp.", true);
         // Rollback
@@ -496,6 +500,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     const noteText = status === LeadStatus.INTERESTED ? interestedNote : status === LeadStatus.MAYBE_LATER ? maybeLaterNote : outcomeNote;
 
+    // Close modal immediately for instant UX!
+    closeOutcomeModal();
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -520,7 +527,6 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
       if (result.success) {
         showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
-        closeOutcomeModal();
       } else {
         showMessage(result.error || "Failed to update lead status.", true);
         // Rollback
@@ -692,9 +698,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                               setActiveOutcomeLead(lead);
                               setOutcomeNote("");
                             }}
-                            className="flex items-center justify-center py-3 px-4 border border-slate-250 bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-slate-700 rounded-lg font-bold text-sm transition-all active:scale-[0.99] cursor-pointer touch-manipulation"
+                            className="flex items-center justify-center py-3 px-1.5 border border-slate-250 bg-white hover:bg-slate-50 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-slate-705 rounded-lg font-bold text-xs sm:text-sm transition-all active:scale-[0.99] cursor-pointer touch-manipulation truncate w-full"
                           >
-                            {getCallStatus(leadId) === "calling" ? `Log Outcome (${getRemainingSeconds(leadId)}s)` : "Log Outcome"}
+                            {getCallStatus(leadId) === "calling" ? `Outcome ${getRemainingSeconds(leadId)}s` : "Log Outcome"}
                           </button>
                         </div>
                       )}

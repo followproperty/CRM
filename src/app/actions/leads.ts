@@ -266,12 +266,12 @@ export async function updateLeadStatusAction(
       },
     });
 
-    revalidatePath("/caller/leads");
-    revalidatePath("/caller");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/admin/leads");
-    revalidatePath("/admin/followups");
-    revalidatePath("/super-admin/followups");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/caller");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/admin/leads");
+    // revalidatePath("/admin/followups");
+    // revalidatePath("/super-admin/followups");
 
     return { success: true };
   } catch (error) {
@@ -350,12 +350,12 @@ export async function scheduleSiteVisitAction(
       },
     });
 
-    revalidatePath("/caller/leads");
-    revalidatePath("/caller");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/admin/leads");
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/caller");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/admin/leads");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
 
     return { success: true };
   } catch (error) {
@@ -391,11 +391,11 @@ export async function startNegotiationAction(leadId: string, collectionType?: st
       note: "Negotiation started with client",
     });
 
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
@@ -435,11 +435,11 @@ export async function markCustomerWonAction(leadId: string, collectionType?: str
       note: "Deal successfully closed. Customer won!",
     });
 
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
@@ -488,11 +488,11 @@ export async function markCustomerLostAction(
       },
     });
 
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
@@ -534,13 +534,13 @@ export async function requestWhatsAppFollowupAction(leadId: string, collectionTy
       note: "WhatsApp follow-up requested with Admin",
     });
 
-    revalidatePath("/admin/whatsapp");
-    revalidatePath("/super-admin/whatsapp");
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/whatsapp");
+    // revalidatePath("/super-admin/whatsapp");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
@@ -578,13 +578,13 @@ export async function markWhatsAppDetailsSentAction(leadId: string, collectionTy
       note: "WhatsApp details successfully sent to client",
     });
 
-    revalidatePath("/admin/whatsapp");
-    revalidatePath("/super-admin/whatsapp");
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/whatsapp");
+    // revalidatePath("/super-admin/whatsapp");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
@@ -619,13 +619,13 @@ export async function startAdminFollowupAction(leadId: string, collectionType?: 
       note: "Admin WhatsApp follow-up set to in progress",
     });
 
-    revalidatePath("/admin/whatsapp");
-    revalidatePath("/super-admin/whatsapp");
-    revalidatePath("/admin/site-visits");
-    revalidatePath("/super-admin/site-visits");
-    revalidatePath("/caller/leads");
-    revalidatePath("/super-admin/leads");
-    revalidatePath("/caller");
+    // revalidatePath("/admin/whatsapp");
+    // revalidatePath("/super-admin/whatsapp");
+    // revalidatePath("/admin/site-visits");
+    // revalidatePath("/super-admin/site-visits");
+    // revalidatePath("/caller/leads");
+    // revalidatePath("/super-admin/leads");
+    // revalidatePath("/caller");
 
     return { success: true };
   } catch (error) {
