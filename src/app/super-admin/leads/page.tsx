@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead, LeadContainer } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { ILead, LeadStatus } from "@/types/lead";
 import { UserRole } from "@/types/user";
@@ -270,26 +270,17 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
     eligibleUsers = await Promise.all(
       userDocs.map(async (u) => {
         const [
-          activeLeadsCount, activeUploadedLeadsCount,
-          totalLeadsCount, totalUploadedLeadsCount,
-          calledLeadsCount, calledUploadedLeadsCount
+          activeCount,
+          totalCount,
+          calledCount
         ] = await Promise.all([
-          Lead.countDocuments({
+          LeadContainer.countDocuments({
             assignedTo: u._id,
             status: { $in: activeStatuses }
           }),
-          UploadedLead.countDocuments({
-            assignedTo: u._id,
-            status: { $in: activeStatuses }
-          }),
-          Lead.countDocuments({ assignedTo: u._id }),
-          UploadedLead.countDocuments({ assignedTo: u._id }),
-          Lead.countDocuments({ assignedTo: u._id, status: { $ne: LeadStatus.NEW } }),
-          UploadedLead.countDocuments({ assignedTo: u._id, status: { $ne: LeadStatus.NEW } })
+          LeadContainer.countDocuments({ assignedTo: u._id }),
+          LeadContainer.countDocuments({ assignedTo: u._id, status: { $ne: LeadStatus.NEW } })
         ]);
-        const activeCount = activeLeadsCount + activeUploadedLeadsCount;
-        const totalCount = totalLeadsCount + totalUploadedLeadsCount;
-        const calledCount = calledLeadsCount + calledUploadedLeadsCount;
         return {
           _id: u._id.toString(),
           name: u.name,

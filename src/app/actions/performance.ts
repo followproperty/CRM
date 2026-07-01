@@ -1,7 +1,7 @@
 "use server";
 
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
+import { LeadContainer } from "@/models/lead.model";
 import User from "@/models/user.model";
 import Activity from "@/models/activity.model";
 import { LeadStatus } from "@/types/lead";
@@ -176,15 +176,15 @@ export async function getCallerPerformanceAction(
 
     // Queries
     const [
-      totalLeadsCount, totalUploadedCount, totalVrindavanCount,
-      activeLeadsCount, activeUploadedCount, activeVrindavanCount,
-      calledLeadsCount, calledUploadedCount, calledVrindavanCount,
+      totalLeadsCount,
+      activeLeadsCount,
+      calledLeadsCount,
       
-      assignedTargetLeads, assignedTargetUploaded, assignedTargetVrindavan,
-      calledTargetLeads, calledTargetUploaded, calledTargetVrindavan,
+      assignedTargetCount,
+      calledTargetCount,
       
-      assignedPeriodLeads, assignedPeriodUploaded, assignedPeriodVrindavan,
-      calledPeriodLeads, calledPeriodUploaded, calledPeriodVrindavan,
+      assignedPeriodCount,
+      calledPeriodCount,
       
       callsTargetCount,
       callsYesterdayCount,
@@ -193,39 +193,25 @@ export async function getCallerPerformanceAction(
       totalCallsCount
     ] = await Promise.all([
       // Total Assigned
-      Lead.countDocuments({ assignedTo: callerId }),
-      UploadedLead.countDocuments({ assignedTo: callerId }),
-      VrindavanLead.countDocuments({ assignedTo: callerId }),
+      LeadContainer.countDocuments({ assignedTo: callerId }),
       
       // Active Leads
-      Lead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
       
       // Actioned Leads (status != NEW)
-      Lead.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, status: { $ne: LeadStatus.NEW } }),
       
       // Assigned on Target Date
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
       
       // Assigned on Target Date and called (status != NEW)
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
       
       // Assigned in Period
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
       
       // Assigned in Period and called
-      Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
-      UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
-      VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+      LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
       
       // Calls on Target Date
       Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: targetDate.start, $lte: targetDate.end } }),
@@ -247,11 +233,7 @@ export async function getCallerPerformanceAction(
     const statusBreakdown: Record<LeadStatus, number> = {} as Record<LeadStatus, number>;
     await Promise.all(
       Object.values(LeadStatus).map(async (status) => {
-        const [lCount, ulCount] = await Promise.all([
-          Lead.countDocuments({ assignedTo: callerId, status }),
-          UploadedLead.countDocuments({ assignedTo: callerId, status })
-        ]);
-        statusBreakdown[status] = lCount + ulCount;
+        statusBreakdown[status] = await LeadContainer.countDocuments({ assignedTo: callerId, status });
       })
     );
 
@@ -271,13 +253,7 @@ export async function getCallerPerformanceAction(
         let leadPhone = "";
         
         if (act.leadId) {
-          let leadDoc = await Lead.findById(act.leadId).select("name phone").lean();
-          if (!leadDoc) {
-            leadDoc = await UploadedLead.findById(act.leadId).select("name phone").lean();
-          }
-          if (!leadDoc) {
-            leadDoc = await VrindavanLead.findById(act.leadId).select("name phone").lean();
-          }
+          const leadDoc = await LeadContainer.findById(act.leadId).select("name phone").lean();
           if (leadDoc) {
             leadName = leadDoc.name;
             leadPhone = leadDoc.phone;
@@ -299,19 +275,19 @@ export async function getCallerPerformanceAction(
       success: true,
       metrics: {
         callerName: userDoc.name,
-        totalAssigned: totalLeadsCount + totalUploadedCount + totalVrindavanCount,
-        activeLeads: activeLeadsCount + activeUploadedCount + activeVrindavanCount,
-        actionedLeads: calledLeadsCount + calledUploadedCount + calledVrindavanCount,
+        totalAssigned: totalLeadsCount,
+        activeLeads: activeLeadsCount,
+        actionedLeads: calledLeadsCount,
         // Old fields map to target date metrics
-        assignedToday: assignedTargetLeads + assignedTargetUploaded + assignedTargetVrindavan,
-        calledToday: calledTargetLeads + calledTargetUploaded + calledTargetVrindavan,
+        assignedToday: assignedTargetCount,
+        calledToday: calledTargetCount,
         callsToday: callsTargetCount,
         totalCalls: totalCallsCount,
         statusBreakdown,
         recentActivities,
         // New period metrics
-        assignedPeriod: assignedPeriodLeads + assignedPeriodUploaded + assignedPeriodVrindavan,
-        calledPeriod: calledPeriodLeads + calledPeriodUploaded + calledPeriodVrindavan,
+        assignedPeriod: assignedPeriodCount,
+        calledPeriod: calledPeriodCount,
         callsPeriod: callsPeriodCount,
         callsTargetDate: callsTargetCount,
         callsYesterday: callsYesterdayCount,
@@ -399,14 +375,14 @@ export async function getAllCallersPerformanceSummaryAction(
         const callerId = u._id.toString();
 
         const [
-          totalLeadsCount, totalUploadedCount, totalVrindavanCount,
-          activeLeadsCount, activeUploadedCount, activeVrindavanCount,
+          totalLeadsCount,
+          activeLeadsCount,
           
-          assignedTargetLeads, assignedTargetUploaded, assignedTargetVrindavan,
-          calledTargetLeads, calledTargetUploaded, calledTargetVrindavan,
+          assignedTargetCount,
+          calledTargetCount,
           
-          assignedPeriodLeads, assignedPeriodUploaded, assignedPeriodVrindavan,
-          calledPeriodLeads, calledPeriodUploaded, calledPeriodVrindavan,
+          assignedPeriodCount,
+          calledPeriodCount,
           
           callsTargetCount,
           callsYesterdayCount,
@@ -414,34 +390,22 @@ export async function getAllCallersPerformanceSummaryAction(
           callsPeriodCount
         ] = await Promise.all([
           // Total Assigned
-          Lead.countDocuments({ assignedTo: callerId }),
-          UploadedLead.countDocuments({ assignedTo: callerId }),
-          VrindavanLead.countDocuments({ assignedTo: callerId }),
+          LeadContainer.countDocuments({ assignedTo: callerId }),
           
           // Active Leads
-          Lead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
-          VrindavanLead.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
+          LeadContainer.countDocuments({ assignedTo: callerId, status: { $in: activeStatuses } }),
           
           // Assigned on Target Date
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
-          VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
+          LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end } }),
           
           // Assigned on Target and called
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
-          VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
+          LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: targetDate.start, $lte: targetDate.end }, status: { $ne: LeadStatus.NEW } }),
           
           // Assigned in Period
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
-          VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
+          LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end } }),
           
           // Assigned in Period and called
-          Lead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
-          UploadedLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
-          VrindavanLead.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
+          LeadContainer.countDocuments({ assignedTo: callerId, assignedAt: { $gte: period.start, $lte: period.end }, status: { $ne: LeadStatus.NEW } }),
           
           // Calls on Target Date
           Activity.countDocuments({ userId: callerId, action: { $in: callOutcomes }, createdAt: { $gte: targetDate.start, $lte: targetDate.end } }),
@@ -460,15 +424,15 @@ export async function getAllCallersPerformanceSummaryAction(
           callerId,
           name: u.name,
           email: u.email,
-          totalAssigned: totalLeadsCount + totalUploadedCount + totalVrindavanCount,
-          activeLeads: activeLeadsCount + activeUploadedCount + activeVrindavanCount,
+          totalAssigned: totalLeadsCount,
+          activeLeads: activeLeadsCount,
           // Old fields map to target date metrics
-          assignedToday: assignedTargetLeads + assignedTargetUploaded + assignedTargetVrindavan,
-          calledToday: calledTargetLeads + calledTargetUploaded + calledTargetVrindavan,
+          assignedToday: assignedTargetCount,
+          calledToday: calledTargetCount,
           callsToday: callsTargetCount,
           // New period metrics
-          assignedPeriod: assignedPeriodLeads + assignedPeriodUploaded + assignedPeriodVrindavan,
-          calledPeriod: calledPeriodLeads + calledPeriodUploaded + calledPeriodVrindavan,
+          assignedPeriod: assignedPeriodCount,
+          calledPeriod: calledPeriodCount,
           callsPeriod: callsPeriodCount,
           callsTargetDate: callsTargetCount,
           callsYesterday: callsYesterdayCount,

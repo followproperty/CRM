@@ -17,31 +17,18 @@ export const revalidate = 0;
 export default async function SuperAdminDashboard() {
   await dbConnect();
 
-  // Real CRM Database Queries for Operational Metrics (summed across both collections)
+  // Real CRM Database Queries for Operational Metrics (from lead_containers)
   const [
-    interestedDirect, interestedUploaded, interestedVrindavan,
-    followupDirect, followupUploaded, followupVrindavan,
-    whatsappDirect, whatsappUploaded, whatsappVrindavan,
-    visitDirect, visitUploaded, visitVrindavan
+    interestedLeadsCount,
+    pendingFollowupsCount,
+    whatsappRequestsCount,
+    siteVisitsCount
   ] = await Promise.all([
-    getLeadModel("leads").countDocuments({ status: LeadStatus.INTERESTED }),
-    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.INTERESTED }),
-    getLeadModel("vrindavan_leads").countDocuments({ status: LeadStatus.INTERESTED }),
-    getLeadModel("leads").countDocuments({ status: LeadStatus.FOLLOW_UP }),
-    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.FOLLOW_UP }),
-    getLeadModel("vrindavan_leads").countDocuments({ status: LeadStatus.FOLLOW_UP }),
-    getLeadModel("leads").countDocuments({ handedOffToAdmin: true }),
-    getLeadModel("uploaded_leads").countDocuments({ handedOffToAdmin: true }),
-    getLeadModel("vrindavan_leads").countDocuments({ handedOffToAdmin: true }),
-    getLeadModel("leads").countDocuments({ status: LeadStatus.SITE_VISIT }),
-    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.SITE_VISIT }),
-    getLeadModel("vrindavan_leads").countDocuments({ status: LeadStatus.SITE_VISIT })
+    getLeadModel("lead_container").countDocuments({ status: LeadStatus.INTERESTED }),
+    getLeadModel("lead_container").countDocuments({ status: LeadStatus.FOLLOW_UP }),
+    getLeadModel("lead_container").countDocuments({ handedOffToAdmin: true }),
+    getLeadModel("lead_container").countDocuments({ status: LeadStatus.SITE_VISIT })
   ]);
-
-  const interestedLeadsCount = interestedDirect + interestedUploaded + interestedVrindavan;
-  const pendingFollowupsCount = followupDirect + followupUploaded + followupVrindavan;
-  const whatsappRequestsCount = whatsappDirect + whatsappUploaded + whatsappVrindavan;
-  const siteVisitsCount = visitDirect + visitUploaded + visitVrindavan;
 
 
   interface PopulatedUser {

@@ -296,6 +296,9 @@ const UploadedLead: Model<ILeadDocument> =
 const VrindavanLead: Model<ILeadDocument> =
   mongoose.models.VrindavanLead || mongoose.model<ILeadDocument>("VrindavanLead", LeadSchema, "vrindavan_leads");
 
+const LeadContainer: Model<ILeadDocument> =
+  mongoose.models.LeadContainer || mongoose.model<ILeadDocument>("LeadContainer", LeadSchema, "lead_containers");
+
 /**
  * Resolves the appropriate Lead model based on collectionType.
  */
@@ -306,9 +309,15 @@ function getLeadModel(collectionType?: string): Model<ILeadDocument> {
   if (collectionType === "vrindavan_leads") {
     return VrindavanLead;
   }
-  return Lead;
+  if (collectionType === "leads") {
+    return Lead;
+  }
+  if (collectionType === "lead_container") {
+    return LeadContainer;
+  }
+  return LeadContainer;
 }
 
 export default Lead;
-export { Lead, UploadedLead, VrindavanLead, getLeadModel };
+export { Lead, UploadedLead, VrindavanLead, LeadContainer, getLeadModel };
 

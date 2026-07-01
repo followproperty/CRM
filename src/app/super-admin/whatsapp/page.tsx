@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
+import { LeadContainer } from "@/models/lead.model";
 import Project from "@/models/project.model"; // Ensure model registers
 import User from "@/models/user.model";       // Ensure model registers
 import { UserRole } from "@/types/user";
@@ -45,33 +45,14 @@ export default async function SuperAdminWhatsAppFollowupsPage() {
   try {
     await dbConnect();
 
-    // Query leads handed off to admin, sorted by handoff date descending from both collections
-    const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
-      Lead.find({ handedOffToAdmin: true })
-        .populate("assignedTo", "name email")
-        .populate("projectId", "name")
-        .lean(),
-      UploadedLead.find({ handedOffToAdmin: true })
-        .populate("assignedTo", "name email")
-        .populate("projectId", "name")
-        .lean(),
-      VrindavanLead.find({ handedOffToAdmin: true })
-        .populate("assignedTo", "name email")
-        .populate("projectId", "name")
-        .lean()
-    ]);
+    // Query leads handed off to admin, sorted by handoff date descending
+    const leadDocs = await LeadContainer.find({ handedOffToAdmin: true })
+      .populate("assignedTo", "name email")
+      .populate("projectId", "name")
+      .sort({ handedOffAt: -1 })
+      .lean();
 
-    const merged = [
-      ...(leadDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "leads" })),
-      ...(uploadedDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
-      ...(vrindavanDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
-    ];
-
-    merged.sort((a, b) => {
-      const dateA = a.handedOffAt ? new Date(a.handedOffAt).getTime() : 0;
-      const dateB = b.handedOffAt ? new Date(b.handedOffAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    const merged = (leadDocs as unknown as DBPopulatedWhatsAppLead[]);
 
     leads = (merged as unknown as DBPopulatedWhatsAppLead[]).map((lead) => ({
       _id: lead._id.toString(),
@@ -94,7 +75,7 @@ export default async function SuperAdminWhatsAppFollowupsPage() {
       email: lead.email,
       city: lead.city,
       state: lead.state,
-      collectionType: lead.collectionType,
+      collectionType: lead.collectionType || (lead as { sourceCollection?: string }).sourceCollection || "leads",
     }));
   } catch (error) {
     console.error("Failed to fetch WhatsApp handoffs for super admin:", error);

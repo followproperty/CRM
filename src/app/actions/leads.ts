@@ -2,7 +2,7 @@
 
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { getLeadModel } from "@/models/lead.model";
+import { getLeadModel, LeadContainer, ILeadDocument } from "@/models/lead.model";
 
 import User from "@/models/user.model";
 import Note from "@/models/note.model";
@@ -24,6 +24,24 @@ import {
 export interface AssignLeadResult {
   success: boolean;
   error?: string;
+}
+
+async function syncLeadToContainer(lead: ILeadDocument, collectionType?: string) {
+  if (lead.assignedTo) {
+    const leadData = lead.toObject ? lead.toObject() : lead;
+    await LeadContainer.updateOne(
+      { _id: lead._id },
+      {
+        $set: {
+          ...leadData,
+          sourceCollection: collectionType || "leads"
+        }
+      },
+      { upsert: true }
+    );
+  } else {
+    await LeadContainer.deleteOne({ _id: lead._id });
+  }
 }
 
 export async function assignLeadAction(leadId: string, assigneeId: string | null, collectionType?: string): Promise<AssignLeadResult> {
@@ -53,11 +71,12 @@ export async function assignLeadAction(leadId: string, assigneeId: string | null
         return { success: false, error: "Leads can only be assigned to Callers or Admins." };
       }
 
-      // Perform assignment
+      // Perform assignment on staging lead (do not delete!)
       lead.assignedTo = assignee._id;
       lead.assignedAt = new Date();
       lead.assignedBy = session.userId;
       await lead.save();
+      await syncLeadToContainer(lead, collectionType);
 
       // Log assignment activity
       await createAuditedActivity({
@@ -72,12 +91,13 @@ export async function assignLeadAction(leadId: string, assigneeId: string | null
         },
       });
     } else {
-      // Unassign the lead
+      // Unassign the lead in staging
       const prevAssigneeId = lead.assignedTo;
       lead.assignedTo = undefined;
       lead.assignedAt = undefined;
       lead.assignedBy = undefined;
       await lead.save();
+      await syncLeadToContainer(lead, collectionType);
 
       // Log unassignment activity
       await createAuditedActivity({
@@ -214,6 +234,7 @@ export async function updateLeadStatusAction(
     }
 
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Trigger notification if status is INTERESTED
     if (status === LeadStatus.INTERESTED) {
@@ -302,6 +323,7 @@ export async function scheduleSiteVisitAction(
     lead.updatedBy = session.userId;
 
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Trigger notification
     await triggerSiteVisitScheduledNotification(lead);
@@ -352,6 +374,7 @@ export async function startNegotiationAction(leadId: string, collectionType?: st
     lead.status = LeadStatus.NEGOTIATION;
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Log activity
     await createAuditedActivity({
@@ -393,6 +416,7 @@ export async function markCustomerWonAction(leadId: string, collectionType?: str
     lead.wonAt = new Date();
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Trigger notification
     await triggerCustomerWonNotification(lead);
@@ -446,6 +470,7 @@ export async function markCustomerLostAction(
     lead.lostReason = reason.trim();
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Log activity
     await createAuditedActivity({
@@ -492,6 +517,7 @@ export async function requestWhatsAppFollowupAction(leadId: string, collectionTy
     lead.handedOffBy = session.userId;
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Trigger notification
     await triggerAdminHandoffNotification(lead);
@@ -536,6 +562,7 @@ export async function markWhatsAppDetailsSentAction(leadId: string, collectionTy
     lead.status = LeadStatus.WHATSAPP_SHARED;
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Trigger notification
     await triggerWhatsAppDetailsSentNotification(lead);
@@ -580,6 +607,7 @@ export async function startAdminFollowupAction(leadId: string, collectionType?: 
     lead.status = LeadStatus.ADMIN_FOLLOWUP;
     lead.updatedBy = session.userId;
     await lead.save();
+    await syncLeadToContainer(lead, collectionType);
 
     // Log Activity
     await createAuditedActivity({
@@ -664,7 +692,7 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
     }
 
     const Model = getLeadModel(collectionType);
-    // Perform updates in bulk
+    // Perform updates in bulk in staging collection
     if (assigneeId) {
       await Model.updateMany(
         { _id: { $in: leadIds } },
@@ -674,6 +702,21 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
           assignedBy: session.userId,
         }
       );
+
+      // Clone/Sync to LeadContainer
+      const stagingLeads = await Model.find({ _id: { $in: leadIds } }).lean();
+      for (const lead of stagingLeads) {
+        await LeadContainer.updateOne(
+          { _id: lead._id },
+          {
+            $set: {
+              ...lead,
+              sourceCollection: collectionType || "leads"
+            }
+          },
+          { upsert: true }
+        );
+      }
     } else {
       await Model.updateMany(
         { _id: { $in: leadIds } },
@@ -681,6 +724,9 @@ export async function bulkAssignLeadsAction(leadIds: string[], assigneeId: strin
           $unset: { assignedTo: 1, assignedAt: 1, assignedBy: 1 }
         }
       );
+
+      // Delete from LeadContainer
+      await LeadContainer.deleteMany({ _id: { $in: leadIds } });
     }
 
     // Log individual lead activity entries for audit trail
@@ -756,20 +802,13 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
       (status) => !terminalStatuses.includes(status)
     );
 
-    // 3. Compute current active lead counts for each caller
+    // 3. Compute current active lead counts for each caller using LeadContainer
     const callers = await Promise.all(
       callersRaw.map(async (caller) => {
-        const [activeLeadsCount, activeUploadedLeadsCount] = await Promise.all([
-          getLeadModel("leads").countDocuments({
-            assignedTo: caller._id,
-            status: { $in: activeStatuses }
-          }),
-          getLeadModel("uploaded_leads").countDocuments({
-            assignedTo: caller._id,
-            status: { $in: activeStatuses }
-          })
-        ]);
-        const activeCount = activeLeadsCount + activeUploadedLeadsCount;
+        const activeCount = await LeadContainer.countDocuments({
+          assignedTo: caller._id,
+          status: { $in: activeStatuses }
+        });
         return {
           id: caller._id.toString(),
           name: caller.name,
@@ -803,11 +842,24 @@ export async function autoDistributeLeadsAction(leadIds: string[], activeCap: nu
 
       const chosenCaller = eligibleCallers[0];
 
-      // Perform assignment on database
+      // Perform assignment on database (staging lead)
       lead.assignedTo = chosenCaller.id as unknown as Types.ObjectId;
       lead.assignedAt = new Date();
       lead.assignedBy = session.userId as unknown as Types.ObjectId;
       await lead.save();
+
+      // Clone/Sync to LeadContainer
+      const leadData = lead.toObject();
+      await LeadContainer.updateOne(
+        { _id: lead._id },
+        {
+          $set: {
+            ...leadData,
+            sourceCollection: collectionType || "leads"
+          }
+        },
+        { upsert: true }
+      );
 
       // Increment local activeCount tracking
       const callerObj = callers.find(c => c.id === chosenCaller.id);

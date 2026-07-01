@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
+import { LeadContainer } from "@/models/lead.model";
 import { UserRole } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
 import FollowupsDashboardView from "@/components/followups/FollowupsDashboardView";
@@ -79,106 +79,36 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
     // Queries
     // 1. Interested Leads (Only query if no conflicting statusFilter)
     if (statusFilter === "ALL" || statusFilter === LeadStatus.INTERESTED) {
-      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
-        Lead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean(),
-        VrindavanLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean()
-      ]);
-      const merged = [
-        ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
-        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
-      ];
-      merged.sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
-      interestedLeads = merged as unknown as DBLead[];
+      interestedLeads = await LeadContainer.find({ ...baseFilter, status: LeadStatus.INTERESTED })
+        .populate("assignedTo", "name email")
+        .sort({ updatedAt: -1 })
+        .lean() as unknown as DBLead[];
     }
 
     // 2. Call Later Leads
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
-        Lead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean(),
-        VrindavanLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean()
-      ]);
-      const merged = [
-        ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
-        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
-      ];
-      merged.sort((a, b) => {
-        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
-        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
-        return dateA - dateB;
-      });
-      callLaterLeads = merged as unknown as DBLead[];
+      callLaterLeads = await LeadContainer.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP })
+        .populate("assignedTo", "name email")
+        .sort({ nextFollowUp: 1 })
+        .lean() as unknown as DBLead[];
     }
 
     // 3. Today's Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
-        Lead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
-        }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
-        }).populate("assignedTo", "name email").lean(),
-        VrindavanLead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
-        }).populate("assignedTo", "name email").lean()
-      ]);
-      const merged = [
-        ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
-        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
-      ];
-      merged.sort((a, b) => {
-        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
-        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
-        return dateA - dateB;
-      });
-      todaysFollowups = merged as unknown as DBLead[];
+      todaysFollowups = await LeadContainer.find({
+        ...baseFilter,
+        status: LeadStatus.FOLLOW_UP,
+        nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+      }).populate("assignedTo", "name email").sort({ nextFollowUp: 1 }).lean() as unknown as DBLead[];
     }
 
     // 4. Overdue Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
-        Lead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $lt: startOfToday },
-        }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $lt: startOfToday },
-        }).populate("assignedTo", "name email").lean(),
-        VrindavanLead.find({
-          ...baseFilter,
-          status: LeadStatus.FOLLOW_UP,
-          nextFollowUp: { $lt: startOfToday },
-        }).populate("assignedTo", "name email").lean()
-      ]);
-      const merged = [
-        ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
-        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
-      ];
-      merged.sort((a, b) => {
-        const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
-        const dateB = b.nextFollowUp ? new Date(b.nextFollowUp).getTime() : 0;
-        return dateA - dateB;
-      });
-      overdueFollowups = merged as unknown as DBLead[];
+      overdueFollowups = await LeadContainer.find({
+        ...baseFilter,
+        status: LeadStatus.FOLLOW_UP,
+        nextFollowUp: { $lt: startOfToday },
+      }).populate("assignedTo", "name email").sort({ nextFollowUp: 1 }).lean() as unknown as DBLead[];
     }
   } catch (err) {
     console.error("Failed to fetch follow-ups in super-admin dashboard:", err);

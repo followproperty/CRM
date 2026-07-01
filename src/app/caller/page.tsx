@@ -16,12 +16,8 @@ export default async function CallerDashboard() {
 
   await dbConnect();
 
-  // 1. Fetch leads assigned to this caller from both collections concurrently
-  const [directLeadsRaw, uploadedLeadsRaw, vrindavanLeadsRaw] = await Promise.all([
-    getLeadModel("leads").find({ assignedTo: session.userId }).lean(),
-    getLeadModel("uploaded_leads").find({ assignedTo: session.userId }).lean(),
-    getLeadModel("vrindavan_leads").find({ assignedTo: session.userId }).lean()
-  ]);
+  // 1. Fetch leads assigned to this caller from the central container
+  const callerLeadsRaw = await getLeadModel("lead_container").find({ assignedTo: session.userId }).lean();
 
   interface DBLeadType {
     _id: { toString(): string };
@@ -67,12 +63,11 @@ export default async function CallerDashboard() {
     updatedAt?: Date;
   }
 
-  // Merge and tag each lead with its collectionType
-  const callerLeads = [
-    ...(directLeadsRaw as unknown as DBLeadType[]).map((l) => ({ ...l, collectionType: "leads" })),
-    ...(uploadedLeadsRaw as unknown as DBLeadType[]).map((l) => ({ ...l, collectionType: "uploaded_leads" })),
-    ...(vrindavanLeadsRaw as unknown as DBLeadType[]).map((l) => ({ ...l, collectionType: "vrindavan_leads" }))
-  ];
+  // Map and tag each lead with its collectionType
+  const callerLeads = (callerLeadsRaw as unknown as DBLeadType[]).map((l) => ({
+    ...l,
+    collectionType: l.collectionType || (l as { sourceCollection?: string }).sourceCollection || "leads"
+  }));
 
   // Get start of today in Indian Standard Time (IST) for called-today checks
   const formatter = new Intl.DateTimeFormat("en-US", {

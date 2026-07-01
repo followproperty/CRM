@@ -10,11 +10,11 @@ export const revalidate = 0;
 export default async function AdminDashboard() {
   await dbConnect();
 
-  // 1. Fetch metrics from DB (summed across all collections)
+  // 1. Fetch metrics from DB (staging collections + lead_containers for active status)
   const [
     totalLeadsDirect, totalLeadsUploaded, totalLeadsVrindavan,
     unassignedLeadsDirect, unassignedLeadsUploaded, unassignedLeadsVrindavan,
-    dealsClosedDirect, dealsClosedUploaded, dealsClosedVrindavan
+    dealsClosedContainer
   ] = await Promise.all([
     getLeadModel("leads").countDocuments({}),
     getLeadModel("uploaded_leads").countDocuments({}),
@@ -22,15 +22,13 @@ export default async function AdminDashboard() {
     getLeadModel("leads").countDocuments({ assignedTo: null }),
     getLeadModel("uploaded_leads").countDocuments({ assignedTo: null }),
     getLeadModel("vrindavan_leads").countDocuments({ assignedTo: null }),
-    getLeadModel("leads").countDocuments({ status: LeadStatus.CUSTOMER }),
-    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.CUSTOMER }),
-    getLeadModel("vrindavan_leads").countDocuments({ status: LeadStatus.CUSTOMER })
+    getLeadModel("lead_container").countDocuments({ status: LeadStatus.CUSTOMER })
   ]);
 
   const totalLeads = totalLeadsDirect + totalLeadsUploaded + totalLeadsVrindavan;
   const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded + unassignedLeadsVrindavan;
   const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true, isDev: { $ne: true } });
-  const dealsClosed = dealsClosedDirect + dealsClosedUploaded + dealsClosedVrindavan;
+  const dealsClosed = dealsClosedContainer;
 
   // 2. Fetch caller team details with live assigned / won stats
   // Force models registration
@@ -39,21 +37,17 @@ export default async function AdminDashboard() {
   const callers = (await User.find({ role: UserRole.CALLER, isDev: { $ne: true } }).lean()) as unknown as IUser[];
   const callersWithStats = await Promise.all(
     callers.map(async (caller: IUser) => {
-      const [assignedDirect, assignedUploaded, assignedVrindavan, wonDirect, wonUploaded, wonVrindavan] = await Promise.all([
-        getLeadModel("leads").countDocuments({ assignedTo: caller._id }),
-        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id }),
-        getLeadModel("vrindavan_leads").countDocuments({ assignedTo: caller._id }),
-        getLeadModel("leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER }),
-        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER }),
-        getLeadModel("vrindavan_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER })
+      const [assignedCount, wonCount] = await Promise.all([
+        getLeadModel("lead_container").countDocuments({ assignedTo: caller._id }),
+        getLeadModel("lead_container").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER })
       ]);
       return {
         id: caller._id ? caller._id.toString() : "",
         name: caller.name,
         email: caller.email,
         isActive: caller.isActive,
-        assignedCount: assignedDirect + assignedUploaded + assignedVrindavan,
-        wonCount: wonDirect + wonUploaded + wonVrindavan,
+        assignedCount,
+        wonCount,
       };
     })
   );
