@@ -705,7 +705,7 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
 
       {/* Outcome Selection Overlay Modal */}
       {activeOutcomeLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-600/40 backdrop-blur-xs animate-fade-in" onClick={closeOutcomeModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-600/40 backdrop-blur-xs animate-fade-in" onClick={(e) => e.target === e.currentTarget && closeOutcomeModal()}>
           <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/70">
               <div>
