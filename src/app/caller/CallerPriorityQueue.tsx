@@ -48,6 +48,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
   const [leadsList, setLeadsList] = useState<ILead[]>(() => sortLeadsClientSide(leads));
   const [activeCallLeadId, setActiveCallLeadId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
+  const [savingLeadIds, setSavingLeadIds] = useState<string[]>([]);
 
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
@@ -333,6 +334,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     setActiveOutcomeLead(null);
     setOutcomeNote("");
 
+    // Set saving state
+    setSavingLeadIds(prev => [...prev, leadId]);
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -342,18 +346,22 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     });
 
     startTransition(async () => {
-      const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
-      if (result.success) {
-        showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
-      } else {
-        showMessage(result.error || "Failed to update lead status.", true);
-        // Rollback
-        setLeadsList(prev => {
-          const rolledBack = prev.map(l =>
-            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
-          );
-          return sortLeadsClientSide(rolledBack);
-        });
+      try {
+        const result = await updateLeadStatusAction(leadId, status, null, outcomeNote, lead.collectionType);
+        if (result.success) {
+          showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
+        } else {
+          showMessage(result.error || "Failed to update lead status.", true);
+          // Rollback
+          setLeadsList(prev => {
+            const rolledBack = prev.map(l =>
+              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+            );
+            return sortLeadsClientSide(rolledBack);
+          });
+        }
+      } finally {
+        setSavingLeadIds(prev => prev.filter(id => id !== leadId));
       }
     });
   };
@@ -365,6 +373,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     setActiveOutcomeLead(null);
     setOutcomeNote("");
 
+    // Set saving state
+    setSavingLeadIds(prev => [...prev, leadId]);
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -374,18 +385,22 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     });
 
     startTransition(async () => {
-      const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
-      if (result.success) {
-        showMessage("WhatsApp follow-up requested with Admin.");
-      } else {
-        showMessage(result.error || "Failed to request WhatsApp.", true);
-        // Rollback
-        setLeadsList(prev => {
-          const rolledBack = prev.map(l =>
-            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, handedOffToAdmin: false } : l
-          );
-          return sortLeadsClientSide(rolledBack);
-        });
+      try {
+        const result = await requestWhatsAppFollowupAction(leadId, lead.collectionType);
+        if (result.success) {
+          showMessage("WhatsApp follow-up requested with Admin.");
+        } else {
+          showMessage(result.error || "Failed to request WhatsApp.", true);
+          // Rollback
+          setLeadsList(prev => {
+            const rolledBack = prev.map(l =>
+              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED, handedOffToAdmin: false } : l
+            );
+            return sortLeadsClientSide(rolledBack);
+          });
+        }
+      } finally {
+        setSavingLeadIds(prev => prev.filter(id => id !== leadId));
       }
     });
   };
@@ -503,6 +518,9 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     // Close modal immediately for instant UX!
     closeOutcomeModal();
 
+    // Set saving state
+    setSavingLeadIds(prev => [...prev, leadId]);
+
     // Update locally first for instant UI response!
     setLeadsList(prev => {
       const updated = prev.map(l =>
@@ -524,18 +542,22 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
     });
 
     startTransition(async () => {
-      const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
-      if (result.success) {
-        showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
-      } else {
-        showMessage(result.error || "Failed to update lead status.", true);
-        // Rollback
-        setLeadsList(prev => {
-          const rolledBack = prev.map(l =>
-            (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
-          );
-          return sortLeadsClientSide(rolledBack);
-        });
+      try {
+        const result = await updateLeadStatusAction(leadId, status, null, noteText, lead.collectionType, extraDetails);
+        if (result.success) {
+          showMessage(`Status logged as ${LEAD_STATUS_LABELS[status] || status}.`);
+        } else {
+          showMessage(result.error || "Failed to update lead status.", true);
+          // Rollback
+          setLeadsList(prev => {
+            const rolledBack = prev.map(l =>
+              (l._id ? l._id.toString() : "") === leadId ? { ...l, status: LeadStatus.CALLED } : l
+            );
+            return sortLeadsClientSide(rolledBack);
+          });
+        }
+      } finally {
+        setSavingLeadIds(prev => prev.filter(id => id !== leadId));
       }
     });
   };
@@ -666,7 +688,15 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                     {/* Card Actions Stack */}
                     <div className="mt-4">
-                      {isLocked ? (
+                      {savingLeadIds.includes(leadId) ? (
+                        <div className="flex items-center justify-center gap-2 py-3 px-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-xs font-semibold text-indigo-700 animate-pulse">
+                          <svg className="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Saving status update in background...</span>
+                        </div>
+                      ) : isLocked ? (
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 bg-slate-100 p-2.5 rounded-lg border border-slate-200">
                           <span>🔒</span>
                           <div className="flex flex-col">
@@ -888,7 +918,13 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                       setSiteVisitNotes(outcomeNote);
                       setActiveOutcomeLead(null);
                     }}
-                    onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      setSiteVisitLead(activeOutcomeLead);
+                      setSiteVisitDate("");
+                      setSiteVisitNotes(outcomeNote);
+                      setActiveOutcomeLead(null);
+                    }}
                     disabled={isPending}
                     className="flex items-center gap-3 w-full py-3 px-4 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl font-bold text-sm border border-purple-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                   >
@@ -899,7 +935,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleRequestWhatsApp(activeOutcomeLead)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleRequestWhatsApp(activeOutcomeLead);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl font-bold text-sm border border-teal-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -909,7 +948,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.FOLLOW_UP)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.FOLLOW_UP);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-bold text-sm border border-amber-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -919,7 +961,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_ANSWERED)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_ANSWERED);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 rounded-xl font-bold text-sm border border-yellow-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -929,7 +974,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_INTERESTED)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_INTERESTED);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl font-bold text-sm border border-rose-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -953,7 +1001,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.WRONG_NUMBER)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.WRONG_NUMBER);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-orange-50 hover:bg-orange-100 text-orange-855 rounded-xl font-bold text-sm border border-orange-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -963,7 +1014,10 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.DND)}
-                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.DND);
+                  }}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl font-bold text-sm border border-slate-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
