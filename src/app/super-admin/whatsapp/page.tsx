@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
 import Project from "@/models/project.model"; // Ensure model registers
 import User from "@/models/user.model";       // Ensure model registers
 import { UserRole } from "@/types/user";
@@ -46,7 +46,7 @@ export default async function SuperAdminWhatsAppFollowupsPage() {
     await dbConnect();
 
     // Query leads handed off to admin, sorted by handoff date descending from both collections
-    const [leadDocs, uploadedDocs] = await Promise.all([
+    const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
       Lead.find({ handedOffToAdmin: true })
         .populate("assignedTo", "name email")
         .populate("projectId", "name")
@@ -54,12 +54,17 @@ export default async function SuperAdminWhatsAppFollowupsPage() {
       UploadedLead.find({ handedOffToAdmin: true })
         .populate("assignedTo", "name email")
         .populate("projectId", "name")
+        .lean(),
+      VrindavanLead.find({ handedOffToAdmin: true })
+        .populate("assignedTo", "name email")
+        .populate("projectId", "name")
         .lean()
     ]);
 
     const merged = [
       ...(leadDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "leads" })),
-      ...(uploadedDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+      ...(uploadedDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+      ...(vrindavanDocs as unknown as DBPopulatedWhatsAppLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
     ];
 
     merged.sort((a, b) => {

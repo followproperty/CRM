@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
 import { UserRole } from "@/types/user";
 import { LeadStatus, SiteVisitStatus } from "@/types/lead";
 import SiteVisitsDashboardView from "@/components/site-visits/SiteVisitsDashboardView";
@@ -66,17 +66,21 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
     // Queries
     // 1. Upcoming Visits
     if (visitStatusFilter === "ALL" || visitStatusFilter === SiteVisitStatus.SCHEDULED) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
           .populate("assignedTo", "name email")
           .lean(),
         UploadedLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
           .populate("assignedTo", "name email")
+          .lean(),
+        VrindavanLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.SCHEDULED })
+          .populate("assignedTo", "name email")
           .lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
@@ -88,17 +92,21 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
 
     // 2. Completed Visits
     if (visitStatusFilter === "ALL" || visitStatusFilter === SiteVisitStatus.COMPLETED) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
           .populate("assignedTo", "name email")
           .lean(),
         UploadedLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
           .populate("assignedTo", "name email")
+          .lean(),
+        VrindavanLead.find({ ...baseFilter, siteVisitStatus: SiteVisitStatus.COMPLETED })
+          .populate("assignedTo", "name email")
           .lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;
@@ -118,17 +126,21 @@ export default async function AdminSiteVisitsPage({ searchParams }: PageProps) {
         visitStatusFilter === "ALL"
           ? { $in: [SiteVisitStatus.CANCELLED, SiteVisitStatus.NO_SHOW] }
           : visitStatusFilter;
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
           .populate("assignedTo", "name email")
           .lean(),
         UploadedLead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
           .populate("assignedTo", "name email")
+          .lean(),
+        VrindavanLead.find({ ...baseFilter, siteVisitStatus: cancelledStatusFilter })
+          .populate("assignedTo", "name email")
           .lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBSiteVisitLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.siteVisitDate ? new Date(a.siteVisitDate).getTime() : 0;

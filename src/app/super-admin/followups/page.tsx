@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
 import { UserRole } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
 import FollowupsDashboardView from "@/components/followups/FollowupsDashboardView";
@@ -79,13 +79,15 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
     // Queries
     // 1. Interested Leads (Only query if no conflicting statusFilter)
     if (statusFilter === "ALL" || statusFilter === LeadStatus.INTERESTED) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean()
+        UploadedLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean(),
+        VrindavanLead.find({ ...baseFilter, status: LeadStatus.INTERESTED }).populate("assignedTo", "name email").lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -97,13 +99,15 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
 
     // 2. Call Later Leads
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean(),
-        UploadedLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean()
+        UploadedLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean(),
+        VrindavanLead.find({ ...baseFilter, status: LeadStatus.FOLLOW_UP }).populate("assignedTo", "name email").lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
@@ -115,7 +119,7 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
 
     // 3. Today's Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({
           ...baseFilter,
           status: LeadStatus.FOLLOW_UP,
@@ -125,11 +129,17 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
           ...baseFilter,
           status: LeadStatus.FOLLOW_UP,
           nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
+        }).populate("assignedTo", "name email").lean(),
+        VrindavanLead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $gte: startOfToday, $lte: endOfToday },
         }).populate("assignedTo", "name email").lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;
@@ -141,7 +151,7 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
 
     // 4. Overdue Followups
     if (statusFilter === "ALL" || statusFilter === LeadStatus.FOLLOW_UP) {
-      const [leadDocs, uploadedDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
         Lead.find({
           ...baseFilter,
           status: LeadStatus.FOLLOW_UP,
@@ -151,11 +161,17 @@ export default async function SuperAdminFollowupsPage({ searchParams }: PageProp
           ...baseFilter,
           status: LeadStatus.FOLLOW_UP,
           nextFollowUp: { $lt: startOfToday },
+        }).populate("assignedTo", "name email").lean(),
+        VrindavanLead.find({
+          ...baseFilter,
+          status: LeadStatus.FOLLOW_UP,
+          nextFollowUp: { $lt: startOfToday },
         }).populate("assignedTo", "name email").lean()
       ]);
       const merged = [
         ...(leadDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "leads" })),
-        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" }))
+        ...(uploadedDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "uploaded_leads" })),
+        ...(vrindavanDocs as unknown as DBLead[]).map(d => ({ ...d, collectionType: "vrindavan_leads" }))
       ];
       merged.sort((a, b) => {
         const dateA = a.nextFollowUp ? new Date(a.nextFollowUp).getTime() : 0;

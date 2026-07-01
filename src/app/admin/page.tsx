@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import { getLeadModel } from "@/models/lead.model";
+import { getLeadModel, VrindavanLead } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { UserRole, IUser } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
@@ -10,42 +10,50 @@ export const revalidate = 0;
 export default async function AdminDashboard() {
   await dbConnect();
 
-  // 1. Fetch metrics from DB (summed across both collections)
+  // 1. Fetch metrics from DB (summed across all collections)
   const [
-    totalLeadsDirect, totalLeadsUploaded,
-    unassignedLeadsDirect, unassignedLeadsUploaded,
-    dealsClosedDirect, dealsClosedUploaded
+    totalLeadsDirect, totalLeadsUploaded, totalLeadsVrindavan,
+    unassignedLeadsDirect, unassignedLeadsUploaded, unassignedLeadsVrindavan,
+    dealsClosedDirect, dealsClosedUploaded, dealsClosedVrindavan
   ] = await Promise.all([
     getLeadModel("leads").countDocuments({}),
     getLeadModel("uploaded_leads").countDocuments({}),
+    getLeadModel("vrindavan_leads").countDocuments({}),
     getLeadModel("leads").countDocuments({ assignedTo: null }),
     getLeadModel("uploaded_leads").countDocuments({ assignedTo: null }),
+    getLeadModel("vrindavan_leads").countDocuments({ assignedTo: null }),
     getLeadModel("leads").countDocuments({ status: LeadStatus.CUSTOMER }),
-    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.CUSTOMER })
+    getLeadModel("uploaded_leads").countDocuments({ status: LeadStatus.CUSTOMER }),
+    getLeadModel("vrindavan_leads").countDocuments({ status: LeadStatus.CUSTOMER })
   ]);
 
-  const totalLeads = totalLeadsDirect + totalLeadsUploaded;
-  const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded;
+  const totalLeads = totalLeadsDirect + totalLeadsUploaded + totalLeadsVrindavan;
+  const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded + unassignedLeadsVrindavan;
   const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true, isDev: { $ne: true } });
-  const dealsClosed = dealsClosedDirect + dealsClosedUploaded;
+  const dealsClosed = dealsClosedDirect + dealsClosedUploaded + dealsClosedVrindavan;
 
   // 2. Fetch caller team details with live assigned / won stats
+  // Force models registration
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _models = { User, VrindavanLead };
   const callers = (await User.find({ role: UserRole.CALLER, isDev: { $ne: true } }).lean()) as unknown as IUser[];
   const callersWithStats = await Promise.all(
     callers.map(async (caller: IUser) => {
-      const [assignedDirect, assignedUploaded, wonDirect, wonUploaded] = await Promise.all([
+      const [assignedDirect, assignedUploaded, assignedVrindavan, wonDirect, wonUploaded, wonVrindavan] = await Promise.all([
         getLeadModel("leads").countDocuments({ assignedTo: caller._id }),
         getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id }),
+        getLeadModel("vrindavan_leads").countDocuments({ assignedTo: caller._id }),
         getLeadModel("leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER }),
-        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER })
+        getLeadModel("uploaded_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER }),
+        getLeadModel("vrindavan_leads").countDocuments({ assignedTo: caller._id, status: LeadStatus.CUSTOMER })
       ]);
       return {
         id: caller._id ? caller._id.toString() : "",
         name: caller.name,
         email: caller.email,
         isActive: caller.isActive,
-        assignedCount: assignedDirect + assignedUploaded,
-        wonCount: wonDirect + wonUploaded,
+        assignedCount: assignedDirect + assignedUploaded + assignedVrindavan,
+        wonCount: wonDirect + wonUploaded + wonVrindavan,
       };
     })
   );
