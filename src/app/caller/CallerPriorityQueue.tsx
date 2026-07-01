@@ -815,6 +815,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 <button
                   type="button"
                   onClick={() => setSelectedSubStatus(LeadStatus.INTERESTED)}
+                  onTouchStart={() => setSelectedSubStatus(LeadStatus.INTERESTED)}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold text-sm border border-emerald-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -831,6 +832,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                       setSiteVisitNotes(outcomeNote);
                       setActiveOutcomeLead(null);
                     }}
+                    onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                     disabled={isPending}
                     className="flex items-center gap-3 w-full py-3 px-4 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl font-bold text-sm border border-purple-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                   >
@@ -841,6 +843,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleRequestWhatsApp(activeOutcomeLead)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl font-bold text-sm border border-teal-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -850,6 +853,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.FOLLOW_UP)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-bold text-sm border border-amber-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -859,6 +863,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_ANSWERED)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 rounded-xl font-bold text-sm border border-yellow-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -868,6 +873,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.NOT_INTERESTED)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl font-bold text-sm border border-rose-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -878,6 +884,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
                 <button
                   type="button"
                   onClick={() => setSelectedSubStatus(LeadStatus.MAYBE_LATER)}
+                  onTouchStart={() => setSelectedSubStatus(LeadStatus.MAYBE_LATER)}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-800 rounded-xl font-bold text-sm border border-fuchsia-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -887,6 +894,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.WRONG_NUMBER)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-orange-50 hover:bg-orange-100 text-orange-855 rounded-xl font-bold text-sm border border-orange-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
@@ -896,6 +904,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
                 <button
                   onClick={() => handleQuickStatusUpdate(activeOutcomeLead, LeadStatus.DND)}
+                  onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
                   disabled={isPending}
                   className="flex items-center gap-3 w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl font-bold text-sm border border-slate-200 cursor-pointer transition-all active:scale-[0.99] touch-manipulation"
                 >
