@@ -253,6 +253,16 @@ const LeadSchema = new Schema<ILeadDocument>(
       type: Date,
       required: false,
     },
+    collectionType: {
+      type: String,
+      trim: true,
+      required: false,
+    },
+    sourceCollection: {
+      type: String,
+      trim: true,
+      required: false,
+    },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt
