@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead } from "@/models/lead.model";
 import { ILead, LeadStatus, FollowUpStatus, SiteVisitStatus } from "@/types/lead";
 import LeadsFilters from "./LeadsFilters";
 import CallerLeadsTable from "./CallerLeadsTable";
@@ -61,9 +61,10 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
     }
 
     // Query both collections concurrently
-    const [leadsRaw, uploadedLeadsRaw] = await Promise.all([
+    const [leadsRaw, uploadedLeadsRaw, vrindavanLeadsRaw] = await Promise.all([
       Lead.find(query).lean(),
-      UploadedLead.find(query).lean()
+      UploadedLead.find(query).lean(),
+      VrindavanLead.find(query).lean()
     ]);
 
     interface DBLeadType {
@@ -113,7 +114,8 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
     // Tag and merge
     const mergedLeads = [
       ...(leadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "leads" })),
-      ...(uploadedLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "uploaded_leads" }))
+      ...(uploadedLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "uploaded_leads" })),
+      ...(vrindavanLeadsRaw as unknown as DBLeadType[]).map(l => ({ ...l, collectionType: "vrindavan_leads" }))
     ];
 
     // Get start of today in Indian Standard Time (IST) for called-today checks

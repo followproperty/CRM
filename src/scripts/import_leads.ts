@@ -28,7 +28,7 @@ if (fs.existsSync(envPath)) {
 // -----------------------------------------------------------------------------
 // Configurations
 // -----------------------------------------------------------------------------
-const SUPPORTED_COLLECTIONS = ["leads", "uploaded_leads"];
+const SUPPORTED_COLLECTIONS = ["leads", "uploaded_leads", "vrindavan_leads"];
 const FIELD_ALIASES = {
   name: [
     "name", "full name", "contact name", "person name", 
@@ -899,7 +899,7 @@ async function main() {
       address: rawAddress || undefined,
       city: cityVal || undefined,
       state: stateVal || undefined,
-      source: collectionType === "uploaded_leads" ? "UPLOADED_LEADS" : "CUSTOMER_DATABASE",
+      source: collectionType === "uploaded_leads" ? "UPLOADED_LEADS" : (collectionType === "vrindavan_leads" ? "VRINDAVAN_LEADS" : "CUSTOMER_DATABASE"),
       status: LeadStatus.NEW,
       dnd: false,
       handedOffToAdmin: false,
