@@ -162,18 +162,18 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
                   <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Project Name</label>
                   <p className="text-slate-800 font-semibold mt-0.5">{lead.projectName || <span className="text-slate-400 italic">Not set</span>}</p>
                 </div>
-                {lead.address && (
-                  <div className="sm:col-span-2">
-                    <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Address</label>
-                    <p className="text-slate-800 mt-0.5 leading-relaxed">{lead.address}</p>
-                  </div>
-                )}
-                {pitch && (
+                 {pitch && (
                   <div className="sm:col-span-2 bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 mt-1.5 shadow-2xs">
                     <label className="text-[10px] text-emerald-800 uppercase font-bold tracking-wider">AI Generated Pitch Hook</label>
                     <p className="text-slate-800 font-medium text-sm mt-1 leading-relaxed italic">
                       &ldquo;{pitch}&rdquo;
                     </p>
+                  </div>
+                )}
+                {lead.address && (
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Address</label>
+                    <p className="text-slate-800 mt-0.5 leading-relaxed">{lead.address}</p>
                   </div>
                 )}
               </div>

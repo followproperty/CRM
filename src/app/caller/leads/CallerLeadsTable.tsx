@@ -661,14 +661,14 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                 }`}
               >
                 {/* Header Section: Name, Phone Link, and Status */}
-                <div className="flex justify-between items-start gap-2">
-                  <div className="min-w-0">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="min-w-0 flex-1">
                     <button
                       onClick={() => {
                         setSelectedLeadId(leadId);
                         setSelectedLead(lead);
                       }}
-                      className="font-bold text-slate-900 hover:text-indigo-650 hover:underline text-left text-base block truncate cursor-pointer"
+                      className="font-bold text-slate-900 hover:text-indigo-650 hover:underline text-left text-base block cursor-pointer line-clamp-2 break-words pr-1"
                     >
                       {lead.name}
                     </button>
@@ -678,14 +678,16 @@ export default function CallerLeadsTable({ leads }: CallerLeadsTableProps) {
                         e.preventDefault();
                         handleInitiateCall(lead);
                       }}
-                      className="text-sm text-slate-555 font-mono font-medium mt-0.5 hover:text-indigo-650 inline-block"
+                      className="text-sm text-slate-555 font-mono font-medium mt-1 hover:text-indigo-650 inline-block"
                     >
                       {contactNumber}
                     </a>
                   </div>
-                  <span className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${getStatusStyles(lead.status)}`}>
-                    {LEAD_STATUS_LABELS[lead.status] || lead.status}
-                  </span>
+                  <div className="flex-shrink-0 pt-0.5">
+                    <span className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase tracking-wider block ${getStatusStyles(lead.status)}`}>
+                      {LEAD_STATUS_LABELS[lead.status] || lead.status}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Actions Stack */}
