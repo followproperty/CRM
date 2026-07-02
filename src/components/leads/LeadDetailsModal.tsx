@@ -172,7 +172,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
                   <div className="sm:col-span-2 bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 mt-1.5 shadow-2xs">
                     <label className="text-[10px] text-emerald-800 uppercase font-bold tracking-wider">AI Generated Pitch Hook</label>
                     <p className="text-slate-800 font-medium text-sm mt-1 leading-relaxed italic">
-                      "{pitch}"
+                      &ldquo;{pitch}&rdquo;
                     </p>
                   </div>
                 )}
@@ -229,7 +229,7 @@ export default function LeadDetailsModal({ leadId, lead, isOpen, onClose, role }
                   <div className="sm:col-span-2 md:col-span-3 bg-purple-50/40 border border-purple-100/50 rounded-xl p-3.5 mt-1.5 shadow-2xs">
                     <label className="text-[10px] text-purple-700 uppercase font-bold tracking-wider">AI Generated Pitch Hook</label>
                     <p className="text-slate-800 font-medium text-sm mt-1 leading-relaxed italic">
-                      "{pitch}"
+                      &ldquo;{pitch}&rdquo;
                     </p>
                   </div>
                 )}
