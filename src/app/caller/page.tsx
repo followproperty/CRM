@@ -61,6 +61,7 @@ export default async function CallerDashboard() {
     createdAt?: Date | string;
     collectionType?: string;
     updatedAt?: Date;
+    sourceDetails?: Record<string, unknown>;
   }
 
   // Map and tag each lead with its collectionType
@@ -159,7 +160,7 @@ export default async function CallerDashboard() {
     createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
     updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
     collectionType: lead.collectionType,
-    sourceDetails: (lead as any).sourceDetails,
+    sourceDetails: lead.sourceDetails,
   }));
 
 
