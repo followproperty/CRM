@@ -313,6 +313,9 @@ const LeadContainer: Model<ILeadDocument> =
  * Resolves the appropriate Lead model based on collectionType.
  */
 function getLeadModel(collectionType?: string): Model<ILeadDocument> {
+  if (!collectionType) {
+    return LeadContainer;
+  }
   if (collectionType === "uploaded_leads") {
     return UploadedLead;
   }
@@ -325,7 +328,18 @@ function getLeadModel(collectionType?: string): Model<ILeadDocument> {
   if (collectionType === "lead_container") {
     return LeadContainer;
   }
-  return LeadContainer;
+
+  // Fallback / Dynamic model generator for any other collections (e.g. "leads_vrindavan")
+  const modelName = collectionType
+    .split(/[_-]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("") + "Lead";
+
+  if (mongoose.models[modelName]) {
+    return mongoose.models[modelName] as Model<ILeadDocument>;
+  }
+
+  return mongoose.model<ILeadDocument>(modelName, LeadSchema, collectionType);
 }
 
 export default Lead;

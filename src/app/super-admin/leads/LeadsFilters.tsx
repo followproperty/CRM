@@ -87,6 +87,7 @@ export default function LeadsFilters() {
             <option value="leads">Leads Only</option>
             <option value="uploaded_leads">Uploaded Only</option>
             <option value="vrindavan_leads">Vrindavan Only</option>
+            <option value="leads_vrindavan">Scraped Vrindavan Only</option>
           </select>
         </div>
 

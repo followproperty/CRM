@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead, LeadContainer } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead, LeadContainer, getLeadModel } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { ILead, LeadStatus } from "@/types/lead";
 import { UserRole } from "@/types/user";
@@ -142,21 +142,22 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
         ...mapLeadDoc(lead),
         collectionType: "leads"
       }));
-    } else if (collectionFilter === "uploaded_leads") {
-      totalCount = await UploadedLead.countDocuments(query);
-      totalUnassignedCount = await UploadedLead.countDocuments(unassignedFilter);
+    } else if (collectionFilter && collectionFilter !== "ALL") {
+      const DynamicModel = getLeadModel(collectionFilter);
+      totalCount = await DynamicModel.countDocuments(query);
+      totalUnassignedCount = await DynamicModel.countDocuments(unassignedFilter);
 
-      const oldestUnassignedDocs = await UploadedLead.find(unassignedFilter)
+      const oldestUnassignedDocs = await DynamicModel.find(unassignedFilter)
         .select("_id")
         .sort({ createdAt: 1 })
         .limit(200)
         .lean();
       oldestUnassignedLeads = oldestUnassignedDocs.map((doc) => ({
         _id: doc._id.toString(),
-        collectionType: "uploaded_leads"
+        collectionType: collectionFilter
       }));
 
-      const leadDocs = await UploadedLead.find(query)
+      const leadDocs = await DynamicModel.find(query)
         .populate("assignedTo", "name")
         .sort({ createdAt: -1 })
         .skip((currentPage - 1) * LIMIT)
@@ -165,32 +166,7 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
 
       leads = (leadDocs as unknown as DBPopulatedLead[]).map((lead) => ({
         ...mapLeadDoc(lead),
-        collectionType: "uploaded_leads"
-      }));
-    } else if (collectionFilter === "vrindavan_leads") {
-      totalCount = await VrindavanLead.countDocuments(query);
-      totalUnassignedCount = await VrindavanLead.countDocuments(unassignedFilter);
-
-      const oldestUnassignedDocs = await VrindavanLead.find(unassignedFilter)
-        .select("_id")
-        .sort({ createdAt: 1 })
-        .limit(200)
-        .lean();
-      oldestUnassignedLeads = oldestUnassignedDocs.map((doc) => ({
-        _id: doc._id.toString(),
-        collectionType: "vrindavan_leads"
-      }));
-
-      const leadDocs = await VrindavanLead.find(query)
-        .populate("assignedTo", "name")
-        .sort({ createdAt: -1 })
-        .skip((currentPage - 1) * LIMIT)
-        .limit(LIMIT)
-        .lean();
-
-      leads = (leadDocs as unknown as DBPopulatedLead[]).map((lead) => ({
-        ...mapLeadDoc(lead),
-        collectionType: "vrindavan_leads"
+        collectionType: collectionFilter
       }));
     } else {
       // ALL
