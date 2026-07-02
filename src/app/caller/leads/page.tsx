@@ -203,6 +203,7 @@ export default async function CallerLeadsPage({ searchParams }: PageProps) {
       createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
       updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
       collectionType: lead.collectionType,
+      sourceDetails: (lead as any).sourceDetails,
     }));
   } catch (err) {
     console.error("Failed to fetch assigned leads for caller:", err);

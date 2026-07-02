@@ -159,6 +159,7 @@ export default async function CallerDashboard() {
     createdAt: lead.createdAt ? new Date(lead.createdAt) : undefined,
     updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : undefined,
     collectionType: lead.collectionType,
+    sourceDetails: (lead as any).sourceDetails,
   }));
 
 
