@@ -11,7 +11,7 @@ import { getSession } from "@/lib/session";
 
 export interface PerformanceFilterParams {
   date?: string;
-  period?: "today" | "week" | "month" | "year";
+  period?: "today" | "week" | "month" | "year" | "lifetime";
 }
 
 /**
@@ -83,6 +83,9 @@ function getISTRange(params?: PerformanceFilterParams) {
     periodStartUTC = new Date(yearStartIST.getTime() - istOffsetMs);
     const yearEndIST = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
     periodEndUTC = new Date(yearEndIST.getTime() - istOffsetMs);
+  } else if (period === "lifetime") {
+    periodStartUTC = new Date(0); // Epoch start
+    periodEndUTC = new Date(Date.now() + istOffsetMs + 3153600000000); // Far future (~100 years)
   }
 
   return {
@@ -226,7 +229,23 @@ export async function getCallerPerformanceAction(
     const statusBreakdown: Record<LeadStatus, number> = {} as Record<LeadStatus, number>;
     await Promise.all(
       Object.values(LeadStatus).map(async (status) => {
-        statusBreakdown[status] = await LeadContainer.countDocuments({ assignedTo: callerId, status });
+        if (params?.period && params.period !== "lifetime") {
+          if (status === LeadStatus.NEW) {
+            statusBreakdown[status] = await LeadContainer.countDocuments({
+              assignedTo: callerId,
+              status,
+              assignedAt: { $gte: period.start, $lte: period.end }
+            });
+          } else {
+            statusBreakdown[status] = await LeadContainer.countDocuments({
+              assignedTo: callerId,
+              status,
+              updatedAt: { $gte: period.start, $lte: period.end }
+            });
+          }
+        } else {
+          statusBreakdown[status] = await LeadContainer.countDocuments({ assignedTo: callerId, status });
+        }
       })
     );
 

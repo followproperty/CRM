@@ -8,7 +8,7 @@ import { formatToISTShort } from "@/lib/date";
 interface PerformanceViewProps {
   metrics: CallerPerformanceMetrics;
   showTitle?: boolean;
-  period?: "today" | "week" | "month" | "year";
+  period?: "today" | "week" | "month" | "year" | "lifetime";
   customDate?: string;
 }
 
@@ -59,6 +59,7 @@ export default function PerformanceView({
   const periodLabel = period === "week" ? "This Week" 
                     : period === "month" ? "This Month" 
                     : period === "year" ? "This Year" 
+                    : period === "lifetime" ? "Lifetime"
                     : formatHeaderDate(activeDate, 0);
 
   // Fallback to today fields if action was queried without filters
@@ -70,6 +71,9 @@ export default function PerformanceView({
   const periodProgressPct = activeAssignedPeriod > 0 ? Math.round((activeCalledPeriod / activeAssignedPeriod) * 100) : 0;
   const actionedPct = totalAssigned > 0 ? Math.round((actionedLeads / totalAssigned) * 100) : 0;
   const activePct = totalAssigned > 0 ? Math.round((activeLeads / totalAssigned) * 100) : 0;
+
+  // Calculate total leads in status breakdown for the current period
+  const totalInBreakdown = Object.values(statusBreakdown).reduce((sum, val) => sum + val, 0);
 
   // Define status progress bar colors
   const statusColors: Record<LeadStatus, string> = {
@@ -93,6 +97,13 @@ export default function PerformanceView({
   const getStatusColor = (status: LeadStatus) => {
     return statusColors[status] || "bg-indigo-500";
   };
+
+  const breakdownSubtitle = period === "lifetime" 
+    ? "Distribution of all-time assigned leads by status."
+    : period === "week" ? "Distribution of leads assigned or updated this week by status."
+    : period === "year" ? "Distribution of leads assigned or updated this year by status."
+    : period === "month" ? "Distribution of leads assigned or updated this month by status."
+    : `Distribution of leads assigned or updated today by status.`;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -241,14 +252,14 @@ export default function PerformanceView({
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm md:col-span-5 space-y-4">
           <div>
             <h3 className="text-xs font-bold text-slate-705 uppercase tracking-wider">Pipeline Status Breakdown</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Distribution of all-time assigned leads by status.</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{breakdownSubtitle}</p>
           </div>
 
           <div className="space-y-3.5 pt-2">
             {Object.values(LeadStatus).map((status) => {
               const count = statusBreakdown[status] || 0;
               if (count === 0 && status !== LeadStatus.NEW) return null; // Show New always, hide other empty ones
-              const percent = totalAssigned > 0 ? Math.round((count / totalAssigned) * 100) : 0;
+              const percent = totalInBreakdown > 0 ? Math.round((count / totalInBreakdown) * 100) : 0;
               return (
                 <div key={status} className="space-y-1">
                   <div className="flex justify-between text-xs font-semibold text-slate-650">

@@ -20,7 +20,7 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
   const [isPending, startTransition] = useTransition();
 
   // Filters State
-  const [period, setPeriod] = useState<"today" | "week" | "month" | "year">("today");
+  const [period, setPeriod] = useState<"today" | "week" | "month" | "year" | "lifetime">("today");
   const [customDate, setCustomDate] = useState<string>(() => {
     const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
     const istDate = new Date(Date.now() + istOffsetMs);
@@ -45,6 +45,7 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
     if (period === "week") return "This Week";
     if (period === "month") return "This Month";
     if (period === "year") return "This Year";
+    if (period === "lifetime") return "Lifetime";
     return formatHeaderDate(customDate, 0);
   };
 
@@ -102,7 +103,7 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-805 tracking-tight">Caller Performance Console</h1>
+        <h1 className="text-xl font-bold text-slate-855 tracking-tight">Caller Performance Console</h1>
         <p className="text-xs text-slate-500 mt-0.5">Global monitoring of caller activity log frequencies, daily assignments, and pipeline loads.</p>
       </div>
 
@@ -113,12 +114,11 @@ export default function AdminPerformanceConsole({ callers }: AdminPerformanceCon
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timeframe Period</label>
             <div className="inline-flex p-1 bg-slate-100/80 rounded-xl w-fit">
-              {(["today", "week", "month", "year"] as const).map((p) => {
+              {(["today", "month", "lifetime"] as const).map((p) => {
                 const label = {
                   today: "Today",
-                  week: "Weekly",
                   month: "Monthly",
-                  year: "Yearly"
+                  lifetime: "Lifetime"
                 }[p];
                 return (
                   <button
