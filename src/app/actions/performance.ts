@@ -164,14 +164,7 @@ export async function getCallerPerformanceAction(
     );
 
     const callOutcomes = [
-      ActivityAction.CALL_MADE,
-      ActivityAction.INTERESTED,
-      ActivityAction.NOT_INTERESTED,
-      ActivityAction.DND,
-      ActivityAction.CALL_LATER,
-      ActivityAction.WRONG_NUMBER,
-      ActivityAction.NOT_ANSWERED,
-      ActivityAction.MAYBE_LATER
+      ActivityAction.CALL_MADE
     ];
 
     // Queries
@@ -237,9 +230,10 @@ export async function getCallerPerformanceAction(
       })
     );
 
-    // Recent activities during selected period
+    // Recent activities during selected period (excluding CALL_MADE to avoid duplicate entries in history)
     const activitiesRaw = await Activity.find({
       userId: callerId,
+      action: { $ne: ActivityAction.CALL_MADE },
       createdAt: { $gte: period.start, $lte: period.end }
     })
       .sort({ createdAt: -1 })
@@ -360,14 +354,7 @@ export async function getAllCallersPerformanceSummaryAction(
     );
 
     const callOutcomes = [
-      ActivityAction.CALL_MADE,
-      ActivityAction.INTERESTED,
-      ActivityAction.NOT_INTERESTED,
-      ActivityAction.DND,
-      ActivityAction.CALL_LATER,
-      ActivityAction.WRONG_NUMBER,
-      ActivityAction.NOT_ANSWERED,
-      ActivityAction.MAYBE_LATER
+      ActivityAction.CALL_MADE
     ];
 
     const callers = await Promise.all(
