@@ -1,11 +1,15 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import { Lead, UploadedLead, VrindavanLead, LeadContainer, getLeadModel } from "@/models/lead.model";
+import { Lead, UploadedLead, VrindavanLead, LeadsUpcomingProjectsLead, LeadContainer, getLeadModel } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { ILead, LeadStatus } from "@/types/lead";
 import { UserRole } from "@/types/user";
 import LeadsFilters from "./LeadsFilters";
 import SuperAdminLeadsTable from "./SuperAdminLeadsTable";
+
+// Force models registration
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _models = { User, Lead, UploadedLead, VrindavanLead, LeadsUpcomingProjectsLead, LeadContainer };
 
 interface PageProps {
   searchParams: Promise<{
@@ -170,28 +174,32 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
       }));
     } else {
       // ALL
-      const [leadsCount, uploadedCount, vrindavanCount, unassignedLeadsCount, unassignedUploadedCount, unassignedVrindavanCount] = await Promise.all([
+      const [leadsCount, uploadedCount, vrindavanCount, upcomingCount, unassignedLeadsCount, unassignedUploadedCount, unassignedVrindavanCount, unassignedUpcomingCount] = await Promise.all([
         Lead.countDocuments(query),
         UploadedLead.countDocuments(query),
         VrindavanLead.countDocuments(query),
+        LeadsUpcomingProjectsLead.countDocuments(query),
         Lead.countDocuments(unassignedFilter),
         UploadedLead.countDocuments(unassignedFilter),
-        VrindavanLead.countDocuments(unassignedFilter)
+        VrindavanLead.countDocuments(unassignedFilter),
+        LeadsUpcomingProjectsLead.countDocuments(unassignedFilter)
       ]);
 
-      totalCount = leadsCount + uploadedCount + vrindavanCount;
-      totalUnassignedCount = unassignedLeadsCount + unassignedUploadedCount + unassignedVrindavanCount;
+      totalCount = leadsCount + uploadedCount + vrindavanCount + upcomingCount;
+      totalUnassignedCount = unassignedLeadsCount + unassignedUploadedCount + unassignedVrindavanCount + unassignedUpcomingCount;
 
-      const [oldestLeadsDocs, oldestUploadedDocs, oldestVrindavanDocs] = await Promise.all([
+      const [oldestLeadsDocs, oldestUploadedDocs, oldestVrindavanDocs, oldestUpcomingDocs] = await Promise.all([
         Lead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean(),
         UploadedLead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean(),
-        VrindavanLead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean()
+        VrindavanLead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean(),
+        LeadsUpcomingProjectsLead.find(unassignedFilter).select("_id createdAt").sort({ createdAt: 1 }).limit(200).lean()
       ]);
 
       const mergedOldest = [
         ...oldestLeadsDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "leads" })),
         ...oldestUploadedDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "uploaded_leads" })),
-        ...oldestVrindavanDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "vrindavan_leads" }))
+        ...oldestVrindavanDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "vrindavan_leads" })),
+        ...oldestUpcomingDocs.map((doc) => ({ _id: doc._id.toString(), createdAt: doc.createdAt, collectionType: "leads_upcoming_projects" }))
       ];
       mergedOldest.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -202,16 +210,18 @@ export default async function SuperAdminLeadsPage({ searchParams }: PageProps) {
 
       // Fetch paginated leads from both up to page * limit to merge and sort correctly
       const targetLimit = currentPage * LIMIT;
-      const [leadDocs, uploadedDocs, vrindavanDocs] = await Promise.all([
+      const [leadDocs, uploadedDocs, vrindavanDocs, upcomingDocs] = await Promise.all([
         Lead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean(),
         UploadedLead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean(),
-        VrindavanLead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean()
+        VrindavanLead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean(),
+        LeadsUpcomingProjectsLead.find(query).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(targetLimit).lean()
       ]);
 
       const mergedLeads = [
         ...(leadDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "leads", rawCreatedAt: l.createdAt })),
         ...(uploadedDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "uploaded_leads", rawCreatedAt: l.createdAt })),
-        ...(vrindavanDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "vrindavan_leads", rawCreatedAt: l.createdAt }))
+        ...(vrindavanDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "vrindavan_leads", rawCreatedAt: l.createdAt })),
+        ...(upcomingDocs as unknown as DBPopulatedLead[]).map(l => ({ ...mapLeadDoc(l), collectionType: "leads_upcoming_projects", rawCreatedAt: l.createdAt }))
       ];
 
       mergedLeads.sort((a, b) => {

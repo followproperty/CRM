@@ -306,6 +306,9 @@ const UploadedLead: Model<ILeadDocument> =
 const VrindavanLead: Model<ILeadDocument> =
   mongoose.models.VrindavanLead || mongoose.model<ILeadDocument>("VrindavanLead", LeadSchema, "vrindavan_leads");
 
+const LeadsUpcomingProjectsLead: Model<ILeadDocument> =
+  mongoose.models.LeadsUpcomingProjectsLead || mongoose.model<ILeadDocument>("LeadsUpcomingProjectsLead", LeadSchema, "leads_upcoming_projects");
+
 const LeadContainer: Model<ILeadDocument> =
   mongoose.models.LeadContainer || mongoose.model<ILeadDocument>("LeadContainer", LeadSchema, "lead_containers");
 
@@ -321,6 +324,9 @@ function getLeadModel(collectionType?: string): Model<ILeadDocument> {
   }
   if (collectionType === "vrindavan_leads") {
     return VrindavanLead;
+  }
+  if (collectionType === "leads_upcoming_projects") {
+    return LeadsUpcomingProjectsLead;
   }
   if (collectionType === "leads") {
     return Lead;
@@ -343,5 +349,6 @@ function getLeadModel(collectionType?: string): Model<ILeadDocument> {
 }
 
 export default Lead;
-export { Lead, UploadedLead, VrindavanLead, LeadContainer, getLeadModel };
+export { Lead, UploadedLead, VrindavanLead, LeadsUpcomingProjectsLead, LeadContainer, getLeadModel };
+
 

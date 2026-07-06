@@ -1,6 +1,6 @@
 import React from "react";
 import dbConnect from "@/lib/db";
-import { getLeadModel, VrindavanLead } from "@/models/lead.model";
+import { getLeadModel, VrindavanLead, LeadsUpcomingProjectsLead } from "@/models/lead.model";
 import User from "@/models/user.model";
 import { UserRole, IUser } from "@/types/user";
 import { LeadStatus } from "@/types/lead";
@@ -12,28 +12,30 @@ export default async function AdminDashboard() {
 
   // 1. Fetch metrics from DB (staging collections + lead_containers for active status)
   const [
-    totalLeadsDirect, totalLeadsUploaded, totalLeadsVrindavan,
-    unassignedLeadsDirect, unassignedLeadsUploaded, unassignedLeadsVrindavan,
+    totalLeadsDirect, totalLeadsUploaded, totalLeadsVrindavan, totalLeadsUpcoming,
+    unassignedLeadsDirect, unassignedLeadsUploaded, unassignedLeadsVrindavan, unassignedLeadsUpcoming,
     dealsClosedContainer
   ] = await Promise.all([
     getLeadModel("leads").countDocuments({}),
     getLeadModel("uploaded_leads").countDocuments({}),
     getLeadModel("vrindavan_leads").countDocuments({}),
+    getLeadModel("leads_upcoming_projects").countDocuments({}),
     getLeadModel("leads").countDocuments({ assignedTo: null }),
     getLeadModel("uploaded_leads").countDocuments({ assignedTo: null }),
     getLeadModel("vrindavan_leads").countDocuments({ assignedTo: null }),
+    getLeadModel("leads_upcoming_projects").countDocuments({ assignedTo: null }),
     getLeadModel("lead_container").countDocuments({ status: LeadStatus.CUSTOMER })
   ]);
 
-  const totalLeads = totalLeadsDirect + totalLeadsUploaded + totalLeadsVrindavan;
-  const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded + unassignedLeadsVrindavan;
+  const totalLeads = totalLeadsDirect + totalLeadsUploaded + totalLeadsVrindavan + totalLeadsUpcoming;
+  const unassignedLeads = unassignedLeadsDirect + unassignedLeadsUploaded + unassignedLeadsVrindavan + unassignedLeadsUpcoming;
   const activeCallersCount = await User.countDocuments({ role: UserRole.CALLER, isActive: true, isDev: { $ne: true } });
   const dealsClosed = dealsClosedContainer;
 
   // 2. Fetch caller team details with live assigned / won stats
   // Force models registration
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _models = { User, VrindavanLead };
+  const _models = { User, VrindavanLead, LeadsUpcomingProjectsLead };
   const callers = (await User.find({ role: UserRole.CALLER, isDev: { $ne: true } }).lean()) as unknown as IUser[];
   const callersWithStats = await Promise.all(
     callers.map(async (caller: IUser) => {
