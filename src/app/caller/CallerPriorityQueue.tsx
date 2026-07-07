@@ -10,6 +10,30 @@ interface CallerPriorityQueueProps {
   leads: ILead[];
 }
 
+const getStatusPriority = (status: LeadStatus): number => {
+  switch (status) {
+    case LeadStatus.FOLLOW_UP:
+      return 1;
+    case LeadStatus.NOT_ANSWERED:
+      return 2;
+    case LeadStatus.INTERESTED:
+      return 3;
+    case LeadStatus.SITE_VISIT:
+      return 4;
+    case LeadStatus.NEGOTIATION:
+      return 5;
+    case LeadStatus.WHATSAPP_SHARED:
+      return 6;
+    case LeadStatus.ADMIN_FOLLOWUP:
+      return 7;
+    case LeadStatus.NEW:
+    case LeadStatus.CALLED:
+      return 8;
+    default:
+      return 9;
+  }
+};
+
 const sortLeadsClientSide = (leads: ILead[]): ILead[] => {
   const now = new Date();
   const offset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
@@ -30,8 +54,22 @@ const sortLeadsClientSide = (leads: ILead[]): ILead[] => {
     if (!wasCalledTodayA && wasCalledTodayB) return -1;
 
     if (!wasCalledTodayA) {
-      if (isNewOrCalledA && !isNewOrCalledB) return -1;
-      if (!isNewOrCalledA && isNewOrCalledB) return 1;
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      if (a.status === LeadStatus.FOLLOW_UP && b.status === LeadStatus.FOLLOW_UP) {
+        const dateFollowA = a.followUp?.date ? new Date(a.followUp.date).getTime() : 0;
+        const dateFollowB = b.followUp?.date ? new Date(b.followUp.date).getTime() : 0;
+        if (dateFollowA !== dateFollowB) {
+          if (dateFollowA === 0) return 1;
+          if (dateFollowB === 0) return -1;
+          return dateFollowA - dateFollowB;
+        }
+      }
 
       const dateA = updatedAtA ? updatedAtA.getTime() : 0;
       const dateB = updatedAtB ? updatedAtB.getTime() : 0;
@@ -226,7 +264,7 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
       l.status !== LeadStatus.WRONG_NUMBER
   );
 
-  // Client-side sort to keep NEW/CALLED at top and called-today at bottom instantly
+  // Client-side sort to prioritize in-progress/follow-up leads first, then new leads, and called-today at bottom
   const startOfTodayIST = getStartOfTodayIST();
   priorityQueue.sort((a, b) => {
     const isNewOrCalledA = a.status === LeadStatus.NEW || a.status === LeadStatus.CALLED;
@@ -241,9 +279,22 @@ export default function CallerPriorityQueue({ leads }: CallerPriorityQueueProps)
 
     // If both are in the same group (both not called today, or both called today)
     if (!wasCalledTodayA) {
-      // Pinned NEW and CALLED leads at the top of Group 1
-      if (isNewOrCalledA && !isNewOrCalledB) return -1;
-      if (!isNewOrCalledA && isNewOrCalledB) return 1;
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      if (a.status === LeadStatus.FOLLOW_UP && b.status === LeadStatus.FOLLOW_UP) {
+        const dateFollowA = a.followUp?.date ? new Date(a.followUp.date).getTime() : 0;
+        const dateFollowB = b.followUp?.date ? new Date(b.followUp.date).getTime() : 0;
+        if (dateFollowA !== dateFollowB) {
+          if (dateFollowA === 0) return 1;
+          if (dateFollowB === 0) return -1;
+          return dateFollowA - dateFollowB;
+        }
+      }
 
       // Otherwise sort Group 1 by updatedAt descending (newest first)
       const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
